@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>e-HMIS NUT 001 · Integrated Nutrition Register</title>
+<style>
+:root{
+  --teal-900:#0b3b3c; --teal-700:#0f5c5c; --teal-500:#1a8a83; --teal-100:#e6f4f2;
+  --indigo-700:#3b4a8f; --amber-600:#c9820b; --red-700:#a5322a; --red-100:#fbe9e7;
+  --ink-900:#16211f; --ink-600:#4a5a57; --ink-400:#8a9794; --ink-200:#dbe4e2; --ink-100:#f0f4f3;
+  --bg:#f6f9f8; --card:#ffffff; --border:#dbe4e2;
+}
+*{box-sizing:border-box;}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink-900);font-size:14px;}
+h1,h2,h3,h4{margin:0 0 8px;color:var(--teal-900);}
+button{cursor:pointer;font-family:inherit;}
+input,select,textarea{font-family:inherit;font-size:13px;}
+
+/* ---------- AUTH SCREEN ---------- */
+#auth{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--teal-900),var(--teal-700));padding:20px;}
+.auth-card{background:var(--card);border-radius:14px;padding:32px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.3);}
+.auth-logo{text-align:center;margin-bottom:6px;font-size:34px;}
+.auth-title{text-align:center;font-size:16px;font-weight:700;color:var(--teal-900);margin-bottom:2px;}
+.auth-sub{text-align:center;font-size:12px;color:var(--ink-400);margin-bottom:20px;}
+.auth-tabs{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:18px;}
+.auth-tabs button{flex:1;padding:9px;border:none;background:var(--ink-100);font-size:12.5px;font-weight:600;color:var(--ink-600);}
+.auth-tabs button.active{background:var(--teal-700);color:#fff;}
+.field-group{margin-bottom:12px;}
+.field-group label{display:block;font-size:11.5px;font-weight:600;color:var(--ink-600);margin-bottom:4px;}
+.field-group input,.field-group select{width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:7px;background:#fff;}
+.field-group input:focus,.field-group select:focus{outline:2px solid var(--teal-500);outline-offset:1px;}
+.btn{border:none;border-radius:7px;padding:10px 16px;font-size:13px;font-weight:600;background:var(--teal-700);color:#fff;}
+.btn:hover{background:var(--teal-900);}
+.btn.block{width:100%;}
+.btn.small{padding:6px 11px;font-size:12px;}
+.btn.ghost{background:transparent;color:var(--teal-700);border:1px solid var(--teal-700);}
+.btn.danger{background:var(--red-700);}
+.btn.amber{background:var(--amber-600);}
+.auth-error{background:var(--red-100);color:var(--red-700);font-size:12px;border-radius:6px;padding:8px 10px;margin-bottom:12px;display:none;}
+.auth-error.show{display:block;}
+
+/* ---------- APP SHELL ---------- */
+#app{display:none;min-height:100vh;}
+#app.show{display:flex;}
+.topbar{position:fixed;top:0;left:0;right:0;height:54px;background:var(--teal-900);color:#fff;display:flex;align-items:center;padding:0 18px;z-index:50;gap:14px;}
+.topbar .brand{font-weight:700;font-size:14px;flex:1;}
+.topbar .facility-chip{background:rgba(255,255,255,.12);border-radius:20px;padding:5px 12px;font-size:12px;}
+.topbar .user-chip{font-size:12px;opacity:.9;}
+.sidebar{position:fixed;top:54px;left:0;bottom:0;width:196px;background:#fff;border-right:1px solid var(--border);padding:14px 0;overflow-y:auto;}
+.sidebar button{display:flex;align-items:center;gap:9px;width:100%;text-align:left;padding:10px 18px;border:none;background:transparent;font-size:12.8px;color:var(--ink-600);font-weight:600;}
+.sidebar button.active{background:var(--teal-100);color:var(--teal-900);border-right:3px solid var(--teal-700);}
+.sidebar button:hover{background:var(--ink-100);}
+.main{margin-left:196px;margin-top:54px;padding:24px;flex:1;max-width:calc(100vw - 196px);}
+.view{display:none;} .view.show{display:block;}
+.view-title{font-size:19px;}
+.view-sub{color:var(--ink-400);font-size:12.5px;margin-bottom:16px;}
+
+/* ---------- FORM LAYOUT ---------- */
+.form-shell{display:flex;gap:18px;align-items:flex-start;}
+.form-nav{width:210px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:8px;position:sticky;top:70px;flex-shrink:0;}
+.form-nav button{display:block;width:100%;text-align:left;border:none;background:transparent;padding:8px 10px;border-radius:6px;font-size:11.8px;color:var(--ink-600);font-weight:600;margin-bottom:2px;}
+.form-nav button.active{background:var(--teal-700);color:#fff;}
+.form-body{flex:1;min-width:0;}
+.section{background:#fff;border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:16px;}
+.section-sub{color:var(--ink-400);font-size:12px;margin:-6px 0 14px;}
+.moh-badge{background:var(--amber-600);color:#fff;font-size:9.5px;font-weight:700;border-radius:4px;padding:2px 6px;vertical-align:middle;margin-left:6px;}
+fieldset{border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin:0 0 14px;}
+legend{font-size:12px;font-weight:700;color:var(--teal-700);padding:0 6px;}
+.row{display:grid;gap:12px;margin-bottom:12px;}
+.row.c2{grid-template-columns:1fr 1fr;} .row.c3{grid-template-columns:1fr 1fr 1fr;} .row.c4{grid-template-columns:1fr 1fr 1fr 1fr;}
+@media(max-width:900px){.row.c2,.row.c3,.row.c4{grid-template-columns:1fr;} .form-shell{flex-direction:column;} .form-nav{width:100%;position:static;display:flex;flex-wrap:wrap;} .form-nav button{width:auto;}}
+.field{display:flex;flex-direction:column;gap:4px;}
+.field label{font-size:11.5px;font-weight:600;color:var(--ink-600);}
+.field label .req{color:var(--red-700);}
+.field input,.field select,.field textarea{padding:8px 9px;border:1px solid var(--border);border-radius:7px;background:#fff;width:100%;}
+.field input:disabled{background:var(--ink-100);color:var(--ink-400);}
+.field .hint{font-size:10.5px;color:var(--ink-400);}
+.field.error input,.field.error select{border-color:var(--red-700);}
+.field .err-msg{font-size:10.5px;color:var(--red-700);}
+.picker-input{display:flex;gap:6px;}
+.picker-input input{flex:1;}
+
+.calc-box{background:var(--teal-100);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--teal-900);margin-top:10px;display:flex;flex-wrap:wrap;gap:10px 20px;align-items:center;}
+.calc-box.warn{background:#fff4e0;color:#7a4c00;}
+.calc-box b{font-weight:700;}
+
+.chk-row{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:12.5px;}
+.chk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:4px 14px;}
+
+.form-actions{display:flex;gap:10px;justify-content:flex-end;padding:14px 0 40px;}
+.form-error-banner{background:var(--red-100);color:var(--red-700);padding:10px 14px;border-radius:8px;font-size:12.5px;margin-bottom:14px;display:none;}
+
+/* ---------- TABLES / LISTS ---------- */
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:center;}
+.toolbar input,.toolbar select{padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-size:12.5px;}
+table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+th,td{padding:9px 10px;border-bottom:1px solid var(--border);font-size:12px;text-align:left;}
+th{background:var(--ink-100);color:var(--ink-600);font-weight:700;text-transform:uppercase;font-size:10px;letter-spacing:.03em;}
+tr:hover td{background:var(--teal-100);}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:700;}
+.badge.sam{background:var(--red-100);color:var(--red-700);}
+.badge.mam{background:#fff4e0;color:#7a4c00;}
+.badge.ok{background:var(--teal-100);color:var(--teal-700);}
+.empty-state{text-align:center;padding:60px 20px;color:var(--ink-400);}
+.empty-state .big{font-size:38px;margin-bottom:10px;}
+
+/* ---------- DASHBOARD / REPORTS ---------- */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px;}
+.stat-card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center;}
+.stat-card .num{font-size:26px;font-weight:800;color:var(--teal-900);}
+.stat-card .lbl{font-size:11px;color:var(--ink-400);margin-top:2px;}
+.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+@media(max-width:900px){.dash-grid{grid-template-columns:1fr;}}
+.panel{background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px;}
+.panel h3{font-size:12.5px;display:flex;align-items:center;gap:7px;}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--teal-500);display:inline-block;}
+.bar-row{display:grid;grid-template-columns:130px 1fr 34px;align-items:center;gap:8px;margin-bottom:7px;}
+.bar-label{font-size:11px;color:var(--ink-600);}
+.bar-track{background:var(--ink-100);border-radius:20px;height:9px;overflow:hidden;}
+.bar-fill{height:100%;background:var(--teal-500);border-radius:20px;}
+.bar-val{font-size:11px;font-weight:700;text-align:right;}
+
+/* ---------- MODAL / PICKER ---------- */
+.modal-bg{position:fixed;inset:0;background:rgba(10,20,18,.5);display:none;align-items:center;justify-content:center;z-index:200;padding:20px;}
+.modal-bg.show{display:flex;}
+.modal{background:#fff;border-radius:12px;padding:20px;width:100%;max-width:420px;max-height:80vh;overflow-y:auto;position:relative;}
+.modal-close{position:absolute;top:12px;right:12px;background:none;border:none;font-size:15px;color:var(--ink-400);}
+.picker-list{max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:7px;margin-top:8px;}
+.picker-item{padding:9px 12px;font-size:12.5px;cursor:pointer;border-bottom:1px solid var(--ink-100);}
+.picker-item:hover{background:var(--teal-100);}
+.picker-add{display:flex;gap:6px;margin-top:10px;}
+.picker-add input{flex:1;padding:8px;border:1px solid var(--border);border-radius:7px;}
+#pickerSearch{width:100%;padding:8px;border:1px solid var(--border);border-radius:7px;margin-top:4px;}
+
+/* ---------- VISIT CARDS ---------- */
+.visit-card{border:1px solid var(--border);border-radius:9px;padding:12px 14px;margin-bottom:10px;background:#fbfdfc;}
+.visit-card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.visit-card-head b{font-size:12.5px;color:var(--teal-900);}
+.visit-remove{background:none;border:none;color:var(--red-700);font-size:11px;font-weight:700;}
+
+footer.note{font-size:11px;color:var(--ink-400);text-align:center;padding:14px 0 30px;}
+</style>
+</head>
+<body>
+
+<!-- ================= AUTH ================= -->
+<div id="auth">
+  <div class="auth-card">
+    <div class="auth-logo">🥣</div>
+    <div class="auth-title">e-HMIS NUT 001</div>
+    <div class="auth-sub">Integrated Nutrition Register</div>
+    <div class="auth-tabs">
+      <button id="tabSignIn" class="active" onclick="switchAuthTab('signin')">Sign In</button>
+      <button id="tabSignUp" onclick="switchAuthTab('signup')">Sign Up</button>
+    </div>
+    <div id="authError" class="auth-error"></div>
+
+    <div id="signinForm">
+      <div class="field-group"><label>Username</label><input id="siUsername" type="text" autocomplete="username"></div>
+      <div class="field-group"><label>Password</label><input id="siPassword" type="password" autocomplete="current-password"></div>
+      <button class="btn block" id="signInBtn">Sign In</button>
+    </div>
+
+    <div id="signupForm" style="display:none;">
+      <div class="field-group"><label>Full Name</label><input id="suFullName" type="text"></div>
+      <div class="field-group"><label>Username</label><input id="suUsername" type="text"></div>
+      <div class="field-group"><label>Password</label><input id="suPassword" type="password"></div>
+      <div class="field-group"><label>Role</label>
+        <select id="suRole">
+          <option value="Administrator">Administrator</option>
+          <option value="Facility Nutrition Officer" selected>Facility Nutrition Officer</option>
+          <option value="Nurse / Data Clerk">Nurse / Data Clerk</option>
+          <option value="District Officer">District Officer</option>
+          <option value="Read-only User">Read-only User</option>
+        </select>
+      </div>
+      <div class="field-group"><label>Facility</label>
+        <select id="suFacilityMode" onchange="toggleFacilityMode()">
+          <option value="existing">Join an existing facility</option>
+          <option value="new">Register a new facility</option>
+        </select>
+      </div>
+      <div id="suExistingFacilityWrap" class="field-group"><label>Select Facility</label><select id="suExistingFacility"></select></div>
+      <div id="suNewFacilityWrap" style="display:none;">
+        <div class="field-group"><label>Facility Name</label><input id="suFacilityName" type="text"></div>
+        <div class="field-group"><label>Facility Code</label><input id="suFacilityCode" type="text"></div>
+        <div class="field-group"><label>Level</label><input id="suFacilityLevel" type="text" placeholder="e.g. HC IV"></div>
+        <div class="field-group"><label>District</label><input id="suFacilityDistrict" type="text"></div>
+      </div>
+      <button class="btn block" id="signUpBtn">Create Account</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= APP ================= -->
+<div id="app">
+  <div class="topbar">
+    <div class="brand">🥣 e-HMIS NUT 001</div>
+    <div class="facility-chip" id="facilityChip">Facility</div>
+    <div class="user-chip" id="userChip">User</div>
+    <button class="btn small ghost" style="background:#fff;" onclick="doSignOut()">Sign Out</button>
+  </div>
+  <div class="sidebar">
+    <button data-tab="dashboard" onclick="switchTab('dashboard')">📊 Dashboard</button>
+    <button data-tab="newform" onclick="switchTab('newform')">➕ New Enrolment</button>
+    <button data-tab="clients" onclick="switchTab('clients')">👥 Clients</button>
+    <button data-tab="reports" onclick="switchTab('reports')">📈 Reports</button>
+  </div>
+  <div class="main">
+
+    <!-- ================= DASHBOARD ================= -->
+    <section id="view-dashboard" class="view">
+      <h2 class="view-title">Dashboard</h2>
+      <p class="view-sub">Snapshot for this facility.</p>
+      <div class="stat-grid" id="dashStats"></div>
+      <div class="dash-grid">
+        <div class="panel"><h3><span class="dot"></span>Nutrition Status</h3><div id="dashStatus"></div></div>
+        <div class="panel"><h3><span class="dot" style="background:var(--indigo-700)"></span>Type of Admission</h3><div id="dashAdmission"></div></div>
+      </div>
+      <div class="panel" style="margin-top:18px;"><h3><span class="dot" style="background:var(--amber-600)"></span>Recent Enrolments</h3><div id="dashRecent"></div></div>
+    </section>
+
+    <!-- ================= NEW ENROLMENT FORM ================= -->
+    <section id="view-newform" class="view">
+      <h2 class="view-title" id="formTitle">New Enrolment</h2>
+      <p class="view-sub">Every MoH field below is required exactly as the paper register defines it.</p>
+      <div id="formErrorBanner" class="form-error-banner"></div>
+      <div class="form-shell">
+        <div class="form-nav" id="formNav"></div>
+        <div class="form-body" id="formBody"></div>
+      </div>
+    </section>
+
+    <!-- ================= CLIENTS ================= -->
+    <section id="view-clients" class="view">
+      <h2 class="view-title">Clients</h2>
+      <p class="view-sub">All enrolments recorded at this facility, regardless of who is signed in.</p>
+      <div class="toolbar">
+        <input type="text" id="clientSearch" placeholder="Search name, NIN, INR, serial no..." oninput="renderClients()">
+        <select id="filterStatus" onchange="renderClients()"><option value="">All Nutrition Status</option><option value="MAM">MAM</option><option value="SAM">SAM (no oedema)</option><option value="SAM_O">SAM (with oedema)</option></select>
+        <select id="filterAdmission" onchange="renderClients()"><option value="">All Admission Types</option><option value="N">New</option><option value="R-R">Re-admission-Relapse</option><option value="R-D">Readmission-Defaulter</option><option value="TI">Transfer In</option></select>
+        <button class="btn small ghost" id="exportCsvBtn">Export CSV</button>
+      </div>
+      <div id="clientsTableWrap"></div>
+    </section>
+
+    <!-- ================= REPORTS ================= -->
+    <section id="view-reports" class="view">
+      <h2 class="view-title">Reports &amp; Analytics</h2>
+      <p class="view-sub">Auto-generated summaries for this facility. Choose a period and a category, then Generate.</p>
+      <div class="toolbar">
+        <select id="reportPeriod"><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly" selected>Monthly</option><option value="quarterly">Quarterly</option><option value="annual">Annual</option></select>
+        <select id="reportCategory"></select>
+        <button class="btn small" id="reportGenerateBtn">Generate</button>
+        <span id="reportRangeLabel" style="font-size:11.5px;color:var(--ink-400);"></span>
+      </div>
+      <div id="reportBody"></div>
+    </section>
+
+  </div>
+</div>
+
+<div class="modal-bg" id="pickerModal"><div class="modal" id="pickerModalBody"></div></div>
+
+<footer class="note" id="appFooterNote" style="display:none;">Prototype Electronic NUT 001 Register &middot; Records are scoped to your facility &middot; Not a substitute for a validated MoH production HMIS</footer>
+
+<script>
+/* ============================================================
+   PERSISTENT STORAGE LAYER
+   window.storage only exists inside the Claude artifact runtime. If this file is downloaded
+   and opened directly in a browser, that API is absent — this polyfill mirrors the exact same
+   get/set/delete/list contract against the browser's own localStorage so data genuinely
+   persists on this device/browser across sign-outs and page reloads either way.
+============================================================ */
+if(typeof window.storage === 'undefined'){
+  console.warn('window.storage not found — using local browser storage instead. Records persist on THIS device/browser only.');
+  window.storage = (function(){
+    const NS = 'nutreg::';
+    const fullKey = (key, shared) => NS + (shared ? 'shared::' : 'private::') + key;
+    return {
+      async get(key, shared){
+        const raw = localStorage.getItem(fullKey(key, shared));
+        if(raw === null) throw new Error('key not found: ' + key);
+        return { key, value: raw, shared: !!shared };
+      },
+      async set(key, value, shared){ localStorage.setItem(fullKey(key, shared), value); return { key, value, shared: !!shared }; },
+      async delete(key, shared){ localStorage.removeItem(fullKey(key, shared)); return { key, deleted:true, shared: !!shared }; },
+      async list(prefix, shared){
+        const base = NS + (shared ? 'shared::' : 'private::');
+        const full = base + (prefix || '');
+        const keys = [];
+        for(let i=0;i<localStorage.length;i++){ const k = localStorage.key(i); if(k && k.indexOf(full)===0) keys.push(k.slice(base.length)); }
+        return { keys, prefix, shared: !!shared };
+      }
+    };
+  })();
+  window._USING_LOCAL_STORAGE_FALLBACK = true;
+}
+function showStorageError(context){
+  const banner = document.createElement('div');
+  banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:999;background:#B23B32;color:#fff;padding:10px 16px;font-size:12.5px;text-align:center;font-family:sans-serif;';
+  banner.textContent = 'Could not save data (' + context + '). Your browser storage may be full, in private/incognito mode, or blocked.';
+  document.body.prepend(banner);
+  setTimeout(()=>banner.remove(), 9000);
+}
+async function sGet(key, shared){ try{ const r = await window.storage.get(key, !!shared); return r ? JSON.parse(r.value) : null; }catch(e){ return null; } }
+async function sSet(key, val, shared){
+  try{ const r = await window.storage.set(key, JSON.stringify(val), !!shared); if(!r) throw new Error('empty response'); return true; }
+  catch(e){ console.error('storage set failed', e); showStorageError(key); return false; }
+}
+
+/* Simple non-cryptographic obfuscation for prototype demo accounts only. */
+function pwHash(pw){ let h=0; for(let i=0;i<pw.length;i++){ h=(h<<5)-h+pw.charCodeAt(i); h|=0; } return 'h'+h; }
+
+/* ============================================================
+   CORE (users, facilities, shared lookup lists)
+============================================================ */
+const UGANDA_DISTRICTS = ['Abim','Adjumani','Agago','Alebtong','Amolatar','Amudat','Amuria','Amuru','Apac','Arua','Budaka','Bududa','Bugiri','Buhweju','Buikwe','Bukedea','Bukomansimbi','Bukwo','Bulambuli','Buliisa','Bundibugyo','Bushenyi','Busia','Butaleja','Butambala','Buvuma','Buyende','Dokolo','Gomba','Gulu','Hoima','Ibanda','Iganga','Isingiro','Jinja','Kaabong','Kabale','Kabarole','Kaberamaido','Kagadi','Kakumiro','Kalangala','Kaliro','Kalungu','Kampala','Kamuli','Kamwenge','Kanungu','Kapchorwa','Kapelebyong','Karenga','Kasese','Katakwi','Kayunga','Kazo','Kibaale','Kiboga','Kibuku','Kikuube','Kiruhura','Kiryandongo','Kisoro','Kitagwenda','Kitgum','Koboko','Kole','Kotido','Kumi','Kwania','Kween','Kyankwanzi','Kyegegwa','Kyenjojo','Kyotera','Lamwo','Lira','Luuka','Luwero','Lwengo','Lyantonde','Madi-Okollo','Manafwa','Maracha','Masaka','Masindi','Mayuge','Mbale','Mbarara','Mitooma','Mityana','Moroto','Moyo','Mpigi','Mubende','Mukono','Nabilatuk','Nakapiripirit','Nakaseke','Nakasongola','Namayingo','Namisindwa','Namutumba','Napak','Nebbi','Ngora','Ntoroko','Ntungamo','Nwoya','Obongi','Omoro','Otuke','Oyam','Pader','Pakwach','Pallisa','Rakai','Rubanda','Rubirizi','Rukiga','Rukungiri','Rwampara','Sembabule','Serere','Sheema','Sironko','Soroti','Ssembabule','Tororo','Wakiso','Yumbe','Zombo'];
+
+let CORE = { users:[], facilities:[], lists:{ districts:[...UGANDA_DISTRICTS], subcounties:[], parishes:[], villages:[] } };
+async function loadCore(){
+  const c = await sGet('sys_core', true);
+  if(c){
+    CORE = Object.assign(CORE, c);
+    CORE.lists = Object.assign({districts:[], subcounties:[], parishes:[], villages:[]}, c.lists||{});
+  }
+  const merged = new Set([...(CORE.lists.districts||[]), ...UGANDA_DISTRICTS]);
+  CORE.lists.districts = Array.from(merged).sort();
+}
+async function saveCore(){ return await sSet('sys_core', CORE, true); }
+
+let CURRENT_USER=null, CURRENT_FACILITY=null, CLIENTS={}, DRAFT=null, CURRENT_SECTION=0;
+
+/* ============================================================
+   AUTH
+============================================================ */
+function switchAuthTab(tab){
+  document.getElementById('tabSignIn').classList.toggle('active', tab==='signin');
+  document.getElementById('tabSignUp').classList.toggle('active', tab==='signup');
+  document.getElementById('signinForm').style.display = tab==='signin' ? 'block':'none';
+  document.getElementById('signupForm').style.display = tab==='signup' ? 'block':'none';
+  if(tab==='signup') populateFacilityDropdown();
+  hideAuthError();
+}
+function showAuthError(msg){ const e=document.getElementById('authError'); e.textContent=msg; e.classList.add('show'); }
+function hideAuthError(){ document.getElementById('authError').classList.remove('show'); }
+function toggleFacilityMode(){
+  const mode = document.getElementById('suFacilityMode').value;
+  document.getElementById('suExistingFacilityWrap').style.display = mode==='existing' ? 'block':'none';
+  document.getElementById('suNewFacilityWrap').style.display = mode==='new' ? 'block':'none';
+}
+async function populateFacilityDropdown(){
+  await loadCore();
+  const sel = document.getElementById('suExistingFacility');
+  sel.innerHTML = CORE.facilities.length ? CORE.facilities.map(f=>`<option value="${f.id}">${f.name} (${f.code||'—'})</option>`).join('') : `<option value="">No facilities yet — choose "Register a new facility"</option>`;
+}
+
+async function doSignIn(){
+  const username = document.getElementById('siUsername').value.trim();
+  const password = document.getElementById('siPassword').value;
+  if(!username || !password){ showAuthError('Enter both username and password.'); return; }
+  await loadCore();
+  const user = CORE.users.find(u=>u.username.toLowerCase()===username.toLowerCase());
+  if(!user || user.password !== pwHash(password)){ showAuthError('Incorrect username or password.'); return; }
+  DRAFT = null; CURRENT_SECTION = 0;
+  CURRENT_USER = user;
+  hideAuthError();
+  await afterLogin();
+}
+async function doSignUp(){
+  const fullName = document.getElementById('suFullName').value.trim();
+  const username = document.getElementById('suUsername').value.trim();
+  const password = document.getElementById('suPassword').value;
+  const role = document.getElementById('suRole').value;
+  const mode = document.getElementById('suFacilityMode').value;
+  if(!fullName || !username || !password){ showAuthError('Please fill in all account fields.'); return; }
+  await loadCore();
+  if(CORE.users.some(u=>u.username.toLowerCase()===username.toLowerCase())){ showAuthError('That username is already taken.'); return; }
+  let facility;
+  if(mode==='existing'){
+    const fid = document.getElementById('suExistingFacility').value;
+    facility = CORE.facilities.find(f=>f.id===fid);
+    if(!facility){ showAuthError('Please select a facility, or register a new one.'); return; }
+  } else {
+    const name = document.getElementById('suFacilityName').value.trim();
+    if(!name){ showAuthError('Enter a facility name.'); return; }
+    facility = { id:'fac_'+Date.now(), name, code:document.getElementById('suFacilityCode').value.trim(), level:document.getElementById('suFacilityLevel').value.trim(), district:document.getElementById('suFacilityDistrict').value.trim() };
+    CORE.facilities.push(facility);
+  }
+  const user = { id:'user_'+Date.now(), fullName, username, password:pwHash(password), role, facility_id:facility.id };
+  CORE.users.push(user);
+  const ok = await saveCore();
+  if(!ok){ showAuthError('Could not create the account — storage save failed. Please try again.'); return; }
+  DRAFT=null; CURRENT_SECTION=0;
+  CURRENT_USER = user;
+  hideAuthError();
+  await afterLogin();
+}
+function doSignOut(){
+  CURRENT_USER=null; CURRENT_FACILITY=null; CLIENTS={};
+  DRAFT=null; CURRENT_SECTION=0;
+  document.getElementById('app').classList.remove('show');
+  document.getElementById('auth').style.display='flex';
+  document.getElementById('siUsername').value=''; document.getElementById('siPassword').value='';
+}
+async function afterLogin(){
+  CURRENT_FACILITY = CORE.facilities.find(f=>f.id===CURRENT_USER.facility_id);
+  document.getElementById('auth').style.display='none';
+  document.getElementById('app').classList.add('show');
+  document.getElementById('facilityChip').textContent = CURRENT_FACILITY ? CURRENT_FACILITY.name : 'Facility';
+  document.getElementById('userChip').textContent = CURRENT_USER.fullName + ' · ' + CURRENT_USER.role;
+  if(window._USING_LOCAL_STORAGE_FALLBACK){
+    const f = document.getElementById('appFooterNote');
+    f.style.display='block';
+    f.textContent += ' · Running in local-browser storage mode: data is saved on this device/browser only.';
+  }
+  await loadAllClients();
+  switchTab('dashboard');
+}
+
+/* ============================================================
+   DATA LOADING (facility-wide, shared across every signed-in user)
+============================================================ */
+async function loadAllClients(){
+  CLIENTS = {};
+  const idx = await sGet('clients_index', true) || [];
+  for(const entry of idx){
+    if(entry.facility_id !== CURRENT_FACILITY.id) continue;
+    const rec = await sGet('client:'+entry.id, true);
+    if(rec) CLIENTS[rec.id] = rec;
+  }
+}
+
+/* ============================================================
+   BLANK RECORD
+============================================================ */
+function nextSerialSuggestion(){
+  const now = new Date(); const mm = String(now.getMonth()+1).padStart(2,'0'); const yyyy = now.getFullYear();
+  const count = Object.values(CLIENTS).filter(c=>{
+    const d = new Date(c.enrol_date || now); return d.getMonth()+1 === now.getMonth()+1 && d.getFullYear()===yyyy;
+  }).length;
+  return String(count+1).padStart(3,'0') + '/' + mm + '/' + yyyy;
+}
+function blankClient(){
+  return {
+    id: 'nut_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
+    facility_id: CURRENT_FACILITY.id,
+    enrol_date: new Date().toISOString().slice(0,10),
+    serial_no: nextSerialSuggestion(),
+    inr_no: '', nin: '',
+    surname:'', given_name:'', age:'', age_unit:'years', sex:'', category:'N',
+    district:'', subcounty:'', parish:'', village:'', phone:'',
+    kin:{surname:'', given_name:'', phone:'', relationship:''},
+    infant_feeding:'', preg_lact_status:'', entry_point:'',
+    assessment_method:'', nutrition_status:'', oedema_grade:'',
+    admission_type:'',
+    mgmt:{nc:false, sfc:false, otc:false, itc:false}, counselling_given:false,
+    tb_status:'', tb_unit_no:'', hiv_status:'', art_status:'',
+    disabilities:[],
+    medical_complications:'',
+    linkage:[],
+    visits:[],
+    exit:{oedema_grade:'', weight_kg:'', height_cm:'', muac_cm:'', whz_at_exit:'', target_muac_met:false, target_whz_met:false, target_no_oedema:false, exit_outcome:'', exit_date:'', transfer_out:false},
+    meta:{created_at:new Date().toISOString(), updated_at:new Date().toISOString(), created_by:CURRENT_USER.id}
+  };
+}
+
+/* ============================================================
+   NAVIGATION
+============================================================ */
+function switchTab(name){
+  document.querySelectorAll('.sidebar button').forEach(b=>b.classList.toggle('active', b.dataset.tab===name));
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('show'));
+  document.getElementById('view-'+name).classList.add('show');
+  if(name==='dashboard') renderDashboard();
+  if(name==='clients') renderClients();
+  if(name==='reports'){ initReportControls(); renderReports(); }
+  if(name==='newform'){ if(!DRAFT) DRAFT = blankClient(); renderFormSections(); }
+}
+
+/* ============================================================
+   FORM SECTIONS NAV
+============================================================ */
+const SECTIONS = [
+  {id:'ident', title:'1–9 · Identification'},
+  {id:'kin', title:'10 · Next of Kin'},
+  {id:'context', title:'11–13 · Care Context'},
+  {id:'assessment', title:'14–16 · Assessment & Admission'},
+  {id:'management', title:'17–18 · Nutrition Management'},
+  {id:'tbhiv', title:'19,21–22 · TB, HIV & ART'},
+  {id:'disability', title:'20 · Disability / Comorbidities'},
+  {id:'complications', title:'23 · Medical Complications'},
+  {id:'visits', title:'24 · Enrolment & Re-Visits'},
+  {id:'exit', title:'25–28 · Exit & Outcome'},
+];
+function renderFormNav(){
+  document.getElementById('formNav').innerHTML = SECTIONS.map((s,i)=>`<button class="${i===CURRENT_SECTION?'active':''}" data-nav="${i}">${s.title}</button>`).join('');
+  document.querySelectorAll('#formNav button').forEach(b=>b.addEventListener('click', ()=>{ CURRENT_SECTION = parseInt(b.dataset.nav); renderFormSections(); }));
+}
+
+/* ---------- field helper ---------- */
+function esc(s){ return (s===undefined||s===null) ? '' : String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fVal(path){ return path.split('.').reduce((o,k)=>o&&o[k]!==undefined?o[k]:'', DRAFT); }
+function setPath(path, val){ const parts = path.split('.'); let obj = DRAFT; for(let i=0;i<parts.length-1;i++) obj = obj[parts[i]]; obj[parts[parts.length-1]] = val; }
+function field(label, path, opts={}){
+  const id = 'f_'+path.replace(/\./g,'_');
+  const val = fVal(path) ?? '';
+  const reqStar = opts.required ? ' <span class="req">*</span>' : '';
+  let control='';
+  if(opts.type==='select'){
+    control = `<select id="${id}" onchange="onField('${path}', this.value)">${(opts.options||[]).map(o=>`<option value="${esc(o.v)}" ${o.v===val?'selected':''}>${esc(o.l)}</option>`).join('')}</select>`;
+  } else if(opts.type==='textarea'){
+    control = `<textarea id="${id}" rows="${opts.rows||3}" oninput="onField('${path}', this.value)">${esc(val)}</textarea>`;
+  } else if(opts.type==='picker'){
+    control = `<div class="picker-input"><input id="${id}" type="text" value="${esc(val)}" readonly placeholder="Tap to select"><button type="button" class="btn small ghost picker-open-btn" data-picker-title="${esc(label)}" data-picker-listkey="${esc(opts.listKey)}" data-picker-path="${esc(path)}">Select</button></div>`;
+  } else {
+    control = `<input id="${id}" type="${opts.type||'text'}" value="${esc(val)}" ${opts.disabled?'disabled':''} oninput="onField('${path}', this.value)">`;
+  }
+  return `<div class="field" id="wrap_${id}"><label>${label}${reqStar}${opts.moh?'<span class="moh-badge">MoH</span>':''}</label>${control}${opts.hint?`<div class="hint">${opts.hint}</div>`:''}<div class="err-msg" id="err_${id}"></div></div>`;
+}
+function onField(path, val){ setPath(path, val); DRAFT.meta.updated_at = new Date().toISOString(); if(path==='surname'||path==='given_name'||path==='nin'||path==='phone') renderDupCheck(); if(path==='nutrition_status') renderFormSections(); }
+
+/* ============================================================
+   DUPLICATE / INR REUSE DETECTION
+   The INR Number belongs to the client, not the visit: it is assigned once per financial year.
+   We detect a likely-existing client (name + NIN/phone match) and offer to re-use their INR
+   Number — either as a straightforward continuation, or as a relapse with the correct postfix.
+============================================================ */
+function normName(s){ return (s||'').toString().trim().toLowerCase().replace(/\s+/g,''); }
+function sameClient(a,b){
+  const an=normName(a.surname), bn=normName(b.surname), ag=normName(a.given_name), bg=normName(b.given_name);
+  if(!an || !ag || an!==bn || ag!==bg) return false;
+  const ninA=(a.nin||'').trim(), ninB=(b.nin||'').trim();
+  if(ninA && ninB) return ninA===ninB;
+  const phA=(a.phone||'').replace(/\D/g,''), phB=(b.phone||'').replace(/\D/g,'');
+  if(phA && phB) return phA===phB;
+  return !!(a.village) && normName(a.village)===normName(b.village) && String(a.age)===String(b.age);
+}
+function relapseCount(baseInr){
+  const base = (baseInr||'').split('-')[0];
+  return Object.values(CLIENTS).filter(c=> (c.inr_no||'').split('-')[0]===base).length;
+}
+function renderDupCheck(){
+  const box = document.getElementById('dupCheckBox');
+  if(!box || !DRAFT) return;
+  if(!DRAFT.surname || !DRAFT.given_name){ box.innerHTML=''; return; }
+  const matches = Object.values(CLIENTS).filter(c=> c.id!==DRAFT.id && sameClient(c, DRAFT));
+  if(!matches.length){ box.innerHTML=''; return; }
+  matches.sort((a,b)=>(b.enrol_date||'').localeCompare(a.enrol_date||''));
+  const m = matches[0];
+  box.innerHTML = `<div class="calc-box warn" style="align-items:flex-start;flex-direction:column;gap:8px;">
+    <span><b>Possible existing client:</b> INR ${m.inr_no||'—'} — ${m.surname||''} ${m.given_name||''}, last enrolled ${m.enrol_date||'—'} at this facility. An INR Number must be assigned to a client once per financial year.</span>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button type="button" class="btn small" id="reuseInrBtn">Re-use INR ${m.inr_no||'—'} (same episode / transfer)</button>
+      <button type="button" class="btn small amber" id="relapseInrBtn">This is a Relapse — append postfix</button>
+    </div>
+  </div>`;
+  const b1 = document.getElementById('reuseInrBtn'); if(b1) b1.addEventListener('click', ()=> applyDuplicateClient(m,false));
+  const b2 = document.getElementById('relapseInrBtn'); if(b2) b2.addEventListener('click', ()=> applyDuplicateClient(m,true));
+}
+function applyDuplicateClient(m, isRelapse){
+  const base = (m.inr_no||'').split('-')[0];
+  DRAFT.inr_no = isRelapse ? (base + '-' + (relapseCount(base)+1)) : m.inr_no;
+  DRAFT.nin = DRAFT.nin || m.nin;
+  DRAFT.sex = DRAFT.sex || m.sex; DRAFT.category = DRAFT.category || m.category;
+  DRAFT.district = m.district; DRAFT.subcounty = m.subcounty; DRAFT.parish = m.parish; DRAFT.village = m.village;
+  DRAFT.phone = DRAFT.phone || m.phone;
+  DRAFT.admission_type = isRelapse ? 'R-R' : 'TI';
+  renderFormSections();
+}
+
+/* ============================================================
+   PICKER (built with real DOM event listeners — never inline onclick strings —
+   so list items are reliably clickable, and seeded with real data so lists aren't empty)
+============================================================ */
+function openPicker(title, listKey, currentVal, path){
+  const list = CORE.lists[listKey] || [];
+  document.getElementById('pickerModalBody').innerHTML = `
+    <button class="modal-close" type="button" id="pickerCloseBtn">✕</button>
+    <h3 style="margin-top:0;font-size:14px;">${title}</h3>
+    <input type="text" id="pickerSearch" placeholder="Search...">
+    <div class="picker-list" id="pickerListBox"></div>
+    <div class="picker-add"><input type="text" id="pickerCustom" placeholder="Add new / not listed..."><button class="btn small" type="button" id="pickerAddBtn">Add &amp; Use</button></div>
+  `;
+  window._pickerState = {list, path, listKey};
+  document.getElementById('pickerCloseBtn').addEventListener('click', closePicker);
+  document.getElementById('pickerSearch').addEventListener('input', filterPickerList);
+  document.getElementById('pickerAddBtn').addEventListener('click', ()=> addCustomPickerValue(listKey, path));
+  filterPickerList();
+  document.getElementById('pickerModal').classList.add('show');
+}
+function filterPickerList(){
+  const q = (document.getElementById('pickerSearch').value||'').toLowerCase();
+  const {list, path} = window._pickerState;
+  const filtered = list.filter(v=>v.toLowerCase().includes(q));
+  const box = document.getElementById('pickerListBox');
+  box.innerHTML='';
+  if(!filtered.length){ box.innerHTML = `<div class="picker-item" style="color:var(--ink-400);cursor:default;">No matches — add it below.</div>`; return; }
+  filtered.forEach(v=>{
+    const item = document.createElement('div'); item.className='picker-item'; item.textContent=v;
+    item.addEventListener('click', ()=> selectPickerValue(path, v));
+    box.appendChild(item);
+  });
+}
+function selectPickerValue(path, val){
+  setPath(path, val);
+  const inputEl = document.getElementById('f_'+path.replace(/\./g,'_'));
+  if(inputEl) inputEl.value = val;
+  closePicker();
+}
+async function addCustomPickerValue(listKey, path){
+  const val = document.getElementById('pickerCustom').value.trim();
+  if(!val) return;
+  if(listKey && CORE.lists[listKey] && !CORE.lists[listKey].includes(val)){ CORE.lists[listKey].push(val); await saveCore(); }
+  selectPickerValue(path, val);
+}
+function closePicker(){ document.getElementById('pickerModal').classList.remove('show'); }
+
+/* ============================================================
+   CLASSIFICATION — restricted strictly to the ranges the register itself publishes
+============================================================ */
+function classifyAdultBMI(bmi){
+  if(bmi==null||isNaN(bmi)) return null;
+  if(bmi<16.0) return 'SM — Severely Malnourished (<16.0)';
+  if(bmi<=16.9) return 'MM — Moderately Malnourished (16.0–16.9)';
+  if(bmi<18.5) return 'Below Normal (17.0–18.4, not separately coded)';
+  if(bmi<=24.9) return 'N — Normal (18.5–24.9)';
+  if(bmi<=29.9) return 'OW — Overweight (25.0–29.9)';
+  return 'O — Obese (≥30.0)';
+}
+function classifyWHZ(z){ if(z==null||isNaN(z)) return null; if(z<-3) return 'SAM (<-3SD)'; if(z<-2) return 'MAM (≥-3SD and <-2SD)'; return 'N — Normal (≥-2SD)'; }
+function classifyWAZ(z){ if(z==null||isNaN(z)) return null; if(z<-3) return 'SU (<-3SD)'; if(z<-2) return 'U (≥-3SD and <-2SD)'; return 'N — Normal (≥-2SD)'; }
+function classifyBAZ(z){ if(z==null||isNaN(z)) return null; if(z<-3) return 'SM — Severely Malnourished (<-3SD)'; if(z<-2) return 'MM — Moderately Malnourished (≥-3SD and <-2SD)'; if(z<=2) return 'N — Normal (≥-2SD and ≤+2SD)'; if(z<=3) return 'OW — Overweight (>+2SD and ≤+3SD)'; return 'O — Obese (>+3SD)'; }
+
+/* ============================================================
+   FORM RENDERING
+============================================================ */
+function renderFormSections(){
+  renderFormNav();
+  const s = SECTIONS[CURRENT_SECTION].id;
+  const body = document.getElementById('formBody');
+  document.getElementById('formTitle').textContent = DRAFT.meta.created_at===DRAFT.meta.updated_at ? 'New Enrolment' : `Editing Enrolment — INR ${DRAFT.inr_no||'(pending)'}`;
+  let html = '';
+
+  if(s==='ident'){
+    html += `<div class="section">
+      <h4>Client Identification <span class="moh-badge">MoH — Cols 1–9</span></h4>
+      <p class="section-sub">A serial number restarts at 001 each month. An INR Number belongs to the client and should not change year to year — the system checks for an existing client as you type.</p>
+      <div class="row c3">
+        ${field('Enrolment Date','enrol_date',{type:'date',moh:true,required:true})}
+        ${field('Serial Number','serial_no',{moh:true,required:true,hint:'Format NNN/MM/YYYY · auto-suggested, editable'})}
+        ${field('INR Number','inr_no',{moh:true,required:true,hint:'Facility/ClientNo/Year/Type e.g. Jinja RRH/001/2026/OTC'})}
+      </div>
+      <div class="row c3">
+        ${field('Surname','surname',{moh:true,required:true})}
+        ${field('Given Name','given_name',{moh:true,required:true})}
+        ${field('NIN','nin',{moh:true,hint:'National Identification Number, if a National'})}
+      </div>
+      <div id="dupCheckBox"></div>
+      <div class="row c4">
+        ${field('Age','age',{type:'number',moh:true,required:true})}
+        ${field('Age Unit','age_unit',{type:'select',moh:true,options:[{v:'years',l:'Years (≥2y)'},{v:'months',l:'Months (<2y)'}]})}
+        ${field('Sex','sex',{type:'select',moh:true,required:true,options:[{v:'',l:'Select'},{v:'M',l:'Male'},{v:'F',l:'Female'}]})}
+        ${field('Client Category','category',{type:'select',moh:true,required:true,options:[{v:'N',l:'N — National/Ugandan'},{v:'R',l:'R — Refugee'},{v:'F',l:'F — Foreigner'}]})}
+      </div>
+      <div class="row c4">
+        ${field('District/City','district',{type:'picker',listKey:'districts',moh:true,required:true})}
+        ${field('Sub-County/Division','subcounty',{type:'picker',listKey:'subcounties',moh:true,required:true})}
+        ${field('Parish/Ward','parish',{type:'picker',listKey:'parishes',moh:true})}
+        ${field('Village/Cell','village',{type:'picker',listKey:'villages',moh:true,required:true})}
+      </div>
+      <div class="row c2">${field('Client Phone/Contact','phone',{type:'tel',moh:true,hint:'e.g. 0771234567'})}</div>
+    </div>`;
+  }
+
+  if(s==='kin'){
+    html += `<div class="section">
+      <h4>Next of Kin <span class="moh-badge">MoH — Col 10</span></h4>
+      <p class="section-sub">For any follow-up or emergency contact.</p>
+      <div class="row c2">${field('Surname','kin.surname',{moh:true})}${field('Given Name','kin.given_name',{moh:true})}</div>
+      <div class="row c2">${field('Phone Contact','kin.phone',{type:'tel',moh:true})}${field('Relationship to Client','kin.relationship',{moh:true})}</div>
+    </div>`;
+  }
+
+  if(s==='context'){
+    html += `<div class="section">
+      <h4>Care Context <span class="moh-badge">MoH — Cols 11–13</span></h4>
+      <div class="row c3">
+        ${field('Infant Feeding Practice','infant_feeding',{type:'select',moh:true,hint:'For children <2 years',options:[{v:'',l:'—'},{v:'EBF',l:'EBF — Exclusive Breast Feeding'},{v:'RF',l:'RF — Replacement Feeding'},{v:'MF',l:'MF — Mixed Feeding'},{v:'CF',l:'CF — Complementary Feeding'},{v:'NLB',l:'NLB — No longer Breastfeeding'},{v:'NA',l:'NA — Not Applicable'}]})}
+        ${field('Pregnancy / Lactating Status','preg_lact_status',{type:'select',moh:true,options:[{v:'',l:'—'},{v:'Preg',l:'Preg — Pregnant'},{v:'Lact',l:'Lact — Lactating'},{v:'NLact',l:'NLact — Non-lactating, child <6mo'},{v:'NA',l:'NA — Not Applicable'}]})}
+        ${field('Entry Care Point','entry_point',{type:'select',moh:true,required:true,options:[{v:'',l:'Select'},{v:'YCC',l:'YCC — Young Child Clinic'},{v:'ANC',l:'ANC — Antenatal Clinic'},{v:'MC',l:'MC — Maternity Clinic'},{v:'PNC',l:'PNC — Postnatal Clinic'},{v:'ART',l:'ART — Antiretroviral Treatment Clinic'},{v:'OPD',l:'OPD — Outpatient Department'},{v:'IPD',l:'IPD — Inpatient Therapeutic'},{v:'TB',l:'TB — TB Clinic'},{v:'CHW',l:'CHW — Community Health Worker Referral'},{v:'SR',l:'SR — Self Referral'}]})}
+      </div>
+    </div>`;
+  }
+
+  if(s==='assessment'){
+    html += `<div class="section">
+      <h4>Assessment &amp; Admission <span class="moh-badge">MoH — Cols 14–16</span></h4>
+      <div class="row c2">
+        ${field('Assessment Method','assessment_method',{type:'select',moh:true,required:true,options:[{v:'',l:'Select'},{v:'M',l:'M — MUAC Tape'},{v:'WH',l:'WH — Weight for Height/Length Z-score'},{v:'WA',l:'WA — Weight for Age Z-score'},{v:'BA',l:'BA — BMI for Age Z-score'},{v:'BMI',l:'BMI — Body Mass Index'},{v:'O',l:'O — Bilateral Pitting Oedema'}]})}
+        ${field('Type of Admission','admission_type',{type:'select',moh:true,required:true,options:[{v:'',l:'Select'},{v:'N',l:'N — New Admission'},{v:'R-R',l:'R-R — Re-admission-Relapse'},{v:'R-D',l:'R-D — Readmission-Defaulter'},{v:'TI',l:'TI — Transfer In'}]})}
+      </div>
+      <fieldset><legend>Nutrition Status at Enrolment</legend>
+        <div class="row c2">
+          ${field('Nutrition Status','nutrition_status',{type:'select',moh:true,required:true,options:[{v:'',l:'Select'},{v:'MAM',l:'MAM — Moderate Acute Malnutrition'},{v:'SAM',l:'SAM — Severe Acute Malnutrition, no oedema'},{v:'SAM_O',l:'SAM — Severe Acute Malnutrition WITH oedema'}]})}
+          ${DRAFT.nutrition_status==='SAM_O' ? field('Oedema Grade','oedema_grade',{type:'select',moh:true,required:true,options:[{v:'',l:'Select'},{v:'+',l:'+ Grade 1 (below the ankles)'},{v:'++',l:'++ Grade 2 (below the knees/lower arms)'},{v:'+++',l:'+++ Grade 3 (feet, legs, arms, face)'}]}) : ''}
+        </div>
+      </fieldset>
+    </div>`;
+  }
+
+  if(s==='management'){
+    html += `<div class="section">
+      <h4>Type of Nutrition Management &amp; Counselling <span class="moh-badge">MoH — Cols 17–18</span></h4>
+      <div class="chk-grid">
+        <label class="chk-row"><input type="checkbox" ${DRAFT.mgmt.nc?'checked':''} onchange="onField('mgmt.nc', this.checked)"> NC — Nutrition Counselling</label>
+        <label class="chk-row"><input type="checkbox" ${DRAFT.mgmt.sfc?'checked':''} onchange="onField('mgmt.sfc', this.checked)"> SFC — Supplementary Feeding Care</label>
+        <label class="chk-row"><input type="checkbox" ${DRAFT.mgmt.otc?'checked':''} onchange="onField('mgmt.otc', this.checked)"> OTC — Outpatient Therapeutic Care</label>
+        <label class="chk-row"><input type="checkbox" ${DRAFT.mgmt.itc?'checked':''} onchange="onField('mgmt.itc', this.checked)"> ITC — Inpatient Therapeutic Care</label>
+      </div>
+      <label class="chk-row" style="margin-top:10px;"><input type="checkbox" ${DRAFT.counselling_given?'checked':''} onchange="onField('counselling_given', this.checked)"> Client received nutrition counselling (tick if MAM but not on supplementary feeding)</label>
+    </div>`;
+  }
+
+  if(s==='tbhiv'){
+    html += `<div class="section">
+      <h4>TB Screening, HIV &amp; ART <span class="moh-badge">MoH — Cols 19, 21–22</span></h4>
+      <fieldset><legend>TB</legend>
+        <div class="row c2">
+          ${field('TB Status','tb_status',{type:'select',moh:true,required:true,options:[{v:'',l:'Select'},{v:'1',l:'1 — No signs/symptoms'},{v:'2',l:'2 — Presumptive'},{v:'3G',l:'3G — TB Diagnosed (GeneXpert)'},{v:'3M',l:'3M — TB Diagnosed (Microscopy)'},{v:'3L',l:'3L — TB Diagnosed (LAM)'},{v:'3X',l:'3X — TB Diagnosed (X-ray)'},{v:'3O',l:'3O — TB Diagnosed (Other)'},{v:'4',l:'4 — TB NRx (diagnosed, not yet on treatment)'},{v:'5',l:'5 — TB Rx (on treatment)'},{v:'6',l:'6 — TB CPTD (treatment completed)'}]})}
+          ${field('TB Unit No.','tb_unit_no',{disabled: !(DRAFT.tb_status && DRAFT.tb_status!=='1' && DRAFT.tb_status!=='2')})}
+        </div>
+      </fieldset>
+      <fieldset><legend>HIV &amp; ART</legend>
+        <div class="row c2">
+          ${field('HIV Status at Enrolment','hiv_status',{type:'select',moh:true,required:true,options:[{v:'',l:'Select'},{v:'Pos',l:'Pos — HIV Positive'},{v:'Neg',l:'Neg — HIV Negative'},{v:'Unknown',l:'Unknown'},{v:'Exposed',l:'Exposed — HIV-Exposed Child'}]})}
+          ${field('ART Services at Enrolment','art_status',{type:'select',moh:true,disabled: !(DRAFT.hiv_status==='Pos'||DRAFT.hiv_status==='Exposed'),options:[{v:'',l:'—'},{v:'ART',l:'ART — On ART (incl. eMTCT)'},{v:'NA',l:'NA — Not yet enrolled / HIV-negative'}]})}
+        </div>
+      </fieldset>
+    </div>`;
+  }
+
+  if(s==='disability'){
+    const nutDis = [['1','Cleft Lip and Palate'],['2','Cerebral Palsy'],['3','Down Syndrome'],['4','Epilepsy'],['5','Autism Spectrum Disorder'],['6','Hydrocephalus']];
+    const otherDis = [['A','Difficulty in seeing'],['B','Albinism'],['C','Difficulty in hearing'],['D','Delayed age motor development'],['E','Difficulty in walking'],['F','Difficulty in understanding'],['G','Difficulty in remembering'],['H','Difficulty in reading'],['I','Difficulty in writing'],['J','Difficulty washing all over/dressing'],['K','Mentally impaired'],['L','Emotionally impaired']];
+    html += `<div class="section">
+      <h4>Disability / Other Comorbidities <span class="moh-badge">MoH — Col 20</span></h4>
+      <fieldset><legend>Disabilities that Impact Nutrition</legend>
+        <div class="chk-grid">${nutDis.map(([c,l])=>`<label class="chk-row"><input type="checkbox" ${DRAFT.disabilities.includes(c)?'checked':''} onchange="toggleDisability('${c}')"> ${c} — ${l}</label>`).join('')}</div>
+      </fieldset>
+      <fieldset><legend>Other Disability Codes</legend>
+        <div class="chk-grid">${otherDis.map(([c,l])=>`<label class="chk-row"><input type="checkbox" ${DRAFT.disabilities.includes(c)?'checked':''} onchange="toggleDisability('${c}')"> ${c} — ${l}</label>`).join('')}</div>
+      </fieldset>
+    </div>`;
+  }
+
+  if(s==='complications'){
+    html += `<div class="section">
+      <h4>Medical Complications at Enrolment <span class="moh-badge">MoH — Col 23</span></h4>
+      <p class="section-sub">e.g. severe anaemia, severe pneumonia, malaria, severe dehydration, shock, hypoglycaemia, hypothermia, severe dermatosis, cerebral palsy.</p>
+      ${field('Medical Complications','medical_complications',{type:'textarea',moh:true,rows:4})}
+    </div>`;
+  }
+
+  if(s==='visits'){
+    html += renderVisitsSection();
+  }
+
+  if(s==='exit'){
+    html += renderExitSection();
+  }
+
+  body.innerHTML = html;
+  renderDupCheck();
+  if(s==='visits') bindVisitFormListeners();
+}
+
+function toggleDisability(code){
+  const i = DRAFT.disabilities.indexOf(code);
+  if(i>=0) DRAFT.disabilities.splice(i,1); else DRAFT.disabilities.push(code);
+}
+
+/* ---------- VISITS (Column 24) ---------- */
+function renderVisitsSection(){
+  const cards = DRAFT.visits.map((v,idx)=>{
+    const bmi = (parseFloat(v.height_cm)>0 && parseFloat(v.weight_kg)>0) ? (parseFloat(v.weight_kg)/((parseFloat(v.height_cm)/100)**2)) : null;
+    return `<div class="visit-card">
+      <div class="visit-card-head"><b>Visit ${idx+1}</b><button type="button" class="visit-remove" data-remove="${idx}">Remove</button></div>
+      <div class="row c4">
+        <div class="field"><label>Visit / Appointment Date</label><input type="date" value="${v.visit_date||''}" data-vfield="${idx}:visit_date"></div>
+        <div class="field"><label>Next Appointment</label><input type="date" value="${v.next_appointment_date||''}" data-vfield="${idx}:next_appointment_date"></div>
+        <div class="field"><label>Oedema</label><select data-vfield="${idx}:oedema_grade"><option value="" ${!v.oedema_grade?'selected':''}>None</option><option value="+" ${v.oedema_grade==='+'?'selected':''}>+</option><option value="++" ${v.oedema_grade==='++'?'selected':''}>++</option><option value="+++" ${v.oedema_grade==='+++'?'selected':''}>+++</option></select></div>
+        <div class="field"><label>Appetite Test</label><select data-vfield="${idx}:appetite_test"><option value="">—</option><option value="Y" ${v.appetite_test==='Y'?'selected':''}>Y — Passed</option><option value="N" ${v.appetite_test==='N'?'selected':''}>N — Did not pass</option><option value="ND" ${v.appetite_test==='ND'?'selected':''}>ND — Not Done</option></select></div>
+      </div>
+      <div class="row c4">
+        <div class="field"><label>Weight (kg)</label><input type="number" step="0.1" value="${esc(v.weight_kg)}" data-vfield="${idx}:weight_kg"></div>
+        <div class="field"><label>Height/Length (cm)</label><input type="number" step="0.1" value="${esc(v.height_cm)}" data-vfield="${idx}:height_cm"></div>
+        <div class="field"><label>MUAC Colour</label><select data-vfield="${idx}:muac_color"><option value="">—</option><option value="G" ${v.muac_color==='G'?'selected':''}>G — Green</option><option value="Y" ${v.muac_color==='Y'?'selected':''}>Y — Yellow</option><option value="R" ${v.muac_color==='R'?'selected':''}>R — Red</option><option value="ND" ${v.muac_color==='ND'?'selected':''}>ND — Not Done</option></select></div>
+        <div class="field"><label>Z-score entered (WH/WA/BA — per Assessment Method)</label><input type="number" step="0.1" value="${v.zscore||''}" data-vfield="${idx}:zscore" placeholder="e.g. -2.4"></div>
+      </div>
+      <div class="row c2">
+        <div class="field"><label>Therapeutic / Supplementary Feeds</label><input type="text" value="${esc(v.feeds)}" data-vfield="${idx}:feeds" placeholder="RUTF, F75, F100, ReSoMal, RUSF, CSB++, FBF, NC..."></div>
+        <div class="field"><label>Counselling Code</label><select data-vfield="${idx}:counselling_code"><option value="">—</option><option value="1" ${v.counselling_code==='1'?'selected':''}>1 — Optimal dietary practices</option><option value="2" ${v.counselling_code==='2'?'selected':''}>2 — Use of Therapeutic Foods</option><option value="3" ${v.counselling_code==='3'?'selected':''}>3 — IYCF</option><option value="4" ${v.counselling_code==='4'?'selected':''}>4 — WASH</option><option value="5" ${v.counselling_code==='5'?'selected':''}>5 — ARV adherence</option><option value="6" ${v.counselling_code==='6'?'selected':''}>6 — Others</option></select></div>
+      </div>
+      <div class="calc-box">
+        ${bmi ? `<span><b>Computed BMI:</b> ${bmi.toFixed(1)} — ${classifyAdultBMI(bmi)}</span>` : ''}
+        ${v.zscore ? `<span><b>Z-score classification:</b> ${DRAFT.assessment_method==='WA'?classifyWAZ(parseFloat(v.zscore)):DRAFT.assessment_method==='BA'?classifyBAZ(parseFloat(v.zscore)):classifyWHZ(parseFloat(v.zscore))}</span>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+  return `<div class="section">
+    <h4>Enrolment &amp; Re-Visits <span class="moh-badge">MoH — Col 24</span></h4>
+    <p class="section-sub">Add one entry per visit — unlike the paper form's fixed 12 columns, you can log as many visits as needed.</p>
+    <div id="visitsList">${cards || '<p style="color:var(--ink-400);font-size:12.5px;">No visits recorded yet.</p>'}</div>
+    <button type="button" class="btn small" id="addVisitBtn">+ Add Visit</button>
+  </div>`;
+}
+function bindVisitFormListeners(){
+  document.getElementById('addVisitBtn').addEventListener('click', ()=>{
+    DRAFT.visits.push({visit_date:'', next_appointment_date:'', oedema_grade:'', weight_kg:'', height_cm:'', muac_color:'', zscore:'', appetite_test:'', feeds:'', counselling_code:''});
+    renderFormSections();
+  });
+  document.querySelectorAll('[data-vfield]').forEach(el=>{
+    const handler = ()=>{ const [idx,key] = el.dataset.vfield.split(':'); DRAFT.visits[idx][key] = el.value; if(key==='weight_kg'||key==='height_cm'||key==='zscore') renderFormSections(); };
+    el.addEventListener(el.tagName==='SELECT' ? 'change' : 'input', handler);
+  });
+  document.querySelectorAll('[data-remove]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{ DRAFT.visits.splice(parseInt(btn.dataset.remove),1); renderFormSections(); });
+  });
+}
+
+/* ---------- EXIT (Cols 25-28) ---------- */
+function renderExitSection(){
+  const e = DRAFT.exit;
+  const days = (DRAFT.enrol_date && e.exit_date) ? Math.max(0, Math.round((new Date(e.exit_date)-new Date(DRAFT.enrol_date))/86400000)) : null;
+  return `<div class="section">
+    <h4>Assessment at Exit <span class="moh-badge">MoH — Cols 25–28</span></h4>
+    <div class="row c4">
+      <div class="field"><label>Exit Oedema</label><select id="ex_oedema"><option value="" ${!e.oedema_grade?'selected':''}>None</option><option value="+" ${e.oedema_grade==='+'?'selected':''}>+</option><option value="++" ${e.oedema_grade==='++'?'selected':''}>++</option><option value="+++" ${e.oedema_grade==='+++'?'selected':''}>+++</option></select></div>
+      <div class="field"><label>Exit Weight (kg)</label><input type="number" step="0.1" id="ex_weight" value="${e.weight_kg||''}"></div>
+      <div class="field"><label>Exit Height/Length (cm)</label><input type="number" step="0.1" id="ex_height" value="${e.height_cm||''}"></div>
+      <div class="field"><label>Exit MUAC (cm)</label><input type="number" step="0.1" id="ex_muac" value="${e.muac_cm||''}"></div>
+    </div>
+    <fieldset><legend>Target Exit Criteria <span class="moh-badge">MoH — published target</span></legend>
+      <p class="section-sub" style="margin-top:0;">Register-published target: No oedema, AND MUAC ≥ 12.5 cm, AND Weight-for-Height Z-score ≥ −2SD.</p>
+      <div id="targetCriteriaBox" class="calc-box"></div>
+    </fieldset>
+    <div class="row c3">
+      ${field('Exit Outcome','exit.exit_outcome',{type:'select',moh:true,options:[{v:'',l:'Select'},{v:'SC',l:'SC — Successfully Treated'},{v:'C',l:'C — Cured'},{v:'NR',l:'NR — Non-Response'},{v:'DF-C',l:'DF-C — Defaulter, Confirmed'},{v:'DF-U',l:'DF-U — Defaulter, Unconfirmed'},{v:'D',l:'D — Died/Dead'}]})}
+      ${field('Exit Date','exit.exit_date',{type:'date',moh:true})}
+      <div class="field"><label>Transfer Out <span class="moh-badge">MoH</span></label><label class="chk-row"><input type="checkbox" id="ex_transfer" ${e.transfer_out?'checked':''}> TO — Transferred to another facility</label></div>
+    </div>
+    <div class="calc-box">${days!==null ? `<span><b>Total Patient Days:</b> ${days}</span>` : '<span style="color:var(--ink-400);">Enter an exit date to compute total patient days.</span>'}</div>
+  </div>`;
+}
+function bindExitListeners(){
+  ['ex_oedema','ex_weight','ex_height','ex_muac','ex_transfer'].forEach(id=>{
+    const el = document.getElementById(id); if(!el) return;
+    el.addEventListener(el.type==='checkbox'?'change':'input', ()=>{
+      if(id==='ex_oedema') DRAFT.exit.oedema_grade = el.value;
+      if(id==='ex_weight') DRAFT.exit.weight_kg = el.value;
+      if(id==='ex_height') DRAFT.exit.height_cm = el.value;
+      if(id==='ex_muac') DRAFT.exit.muac_cm = el.value;
+      if(id==='ex_transfer') DRAFT.exit.transfer_out = el.checked;
+      updateTargetCriteria();
+    });
+  });
+  updateTargetCriteria();
+}
+function updateTargetCriteria(){
+  const box = document.getElementById('targetCriteriaBox'); if(!box) return;
+  const muacOk = parseFloat(DRAFT.exit.muac_cm) >= 12.5;
+  const noOedema = !DRAFT.exit.oedema_grade;
+  const lastVisit = (DRAFT.visits||[]).filter(v=>v.zscore!==undefined && v.zscore!=='').slice(-1)[0];
+  const lastZ = lastVisit ? parseFloat(lastVisit.zscore) : null;
+  const whzOk = lastZ!==null && !isNaN(lastZ) ? (lastZ >= -2) : null;
+  DRAFT.exit.target_muac_met = muacOk; DRAFT.exit.target_no_oedema = noOedema; DRAFT.exit.target_whz_met = !!whzOk;
+  box.innerHTML = `<span>${muacOk?'✅':'—'} MUAC ≥ 12.5cm</span><span>${noOedema?'✅':'—'} No Oedema</span><span>${whzOk===null?'— No visit Z-score on file yet':whzOk?'✅ W/H Z-score ≥ -2SD (last visit: '+lastZ+')':'❌ W/H Z-score < -2SD (last visit: '+lastZ+')'}</span>`;
+}
+
+/* ============================================================
+   VALIDATION & SAVE
+============================================================ */
+function showFormErrors(errs){
+  document.querySelectorAll('.err-msg').forEach(e=>e.textContent='');
+  document.querySelectorAll('.field').forEach(e=>e.classList.remove('error'));
+  const banner = document.getElementById('formErrorBanner');
+  if(!errs.length){ banner.style.display='none'; return; }
+  banner.style.display='block';
+  banner.innerHTML = `<b>${errs.length} issue(s) to fix:</b><ul style="margin:6px 0 0 18px;">${errs.map(e=>`<li>${e.msg}</li>`).join('')}</ul>`;
+  errs.forEach(e=>{
+    const id = 'f_'+e.path.replace(/\./g,'_');
+    const wrap = document.getElementById('wrap_'+id); if(wrap) wrap.classList.add('error');
+    const em = document.getElementById('err_'+id); if(em) em.textContent = e.msg;
+  });
+}
+function validateDraft(){
+  const errs = [];
+  const req = (path,label)=>{ if(!fVal(path)) errs.push({path, msg:`${label} is required.`}); };
+  req('enrol_date','Enrolment Date'); req('serial_no','Serial Number'); req('inr_no','INR Number');
+  req('surname','Surname'); req('given_name','Given Name'); req('age','Age'); req('sex','Sex');
+  req('district','District/City'); req('subcounty','Sub-County/Division'); req('village','Village/Cell');
+  req('entry_point','Entry Care Point'); req('assessment_method','Assessment Method');
+  req('nutrition_status','Nutrition Status'); req('admission_type','Type of Admission');
+  req('tb_status','TB Status'); req('hiv_status','HIV Status');
+  if(DRAFT.nutrition_status==='SAM_O' && !DRAFT.oedema_grade) errs.push({path:'oedema_grade', msg:'Select an oedema grade for SAM with oedema.'});
+
+  // Serial number: unique per facility per month.
+  if(DRAFT.serial_no && DRAFT.enrol_date){
+    const month = DRAFT.enrol_date.slice(0,7);
+    const dup = Object.values(CLIENTS).find(c=> c.id!==DRAFT.id && c.serial_no===DRAFT.serial_no && (c.enrol_date||'').slice(0,7)===month && c.facility_id===DRAFT.facility_id);
+    if(dup) errs.push({path:'serial_no', msg:`Serial number ${DRAFT.serial_no} is already used this month for ${dup.surname||''} ${dup.given_name||''}.`});
+  }
+  // INR number: unique per facility per client — a DIFFERENT client may not reuse it.
+  if(DRAFT.inr_no){
+    const conflict = Object.values(CLIENTS).find(c=> c.id!==DRAFT.id && c.inr_no===DRAFT.inr_no && c.facility_id===DRAFT.facility_id && !sameClient(c,DRAFT));
+    if(conflict) errs.push({path:'inr_no', msg:`INR Number ${DRAFT.inr_no} is already assigned to a different client (${conflict.surname||''} ${conflict.given_name||''}). An INR Number must be unique to one client — use a relapse postfix if this is genuinely the same client.`});
+  }
+  return errs;
+}
+async function saveDraft(goToList){
+  if(document.getElementById('ex_oedema')) bindExitListeners();
+  const errs = validateDraft();
+  showFormErrors(errs);
+  if(errs.length) return;
+
+  DRAFT.meta.updated_at = new Date().toISOString();
+  DRAFT.facility_id = CURRENT_FACILITY.id;
+  const savedRecord = await sSet('client:'+DRAFT.id, DRAFT, true);
+  if(!savedRecord){ alert('This record could NOT be saved to storage. Please check your browser storage settings and try again.'); return; }
+  CLIENTS[DRAFT.id] = DRAFT;
+  let idx = await sGet('clients_index', true) || [];
+  if(!idx.some(e=>e.id===DRAFT.id)) idx.push({id:DRAFT.id, facility_id:DRAFT.facility_id});
+  const savedIndex = await sSet('clients_index', idx, true);
+  if(!savedIndex){ alert('The record saved, but the facility index failed to update — it may not appear in your Clients list yet.'); }
+
+  if(goToList){
+    DRAFT = null;
+    document.getElementById('formErrorBanner').style.display='none';
+    switchTab('clients');
+  } else {
+    alert('Enrolment saved. You can continue later from the Clients list.');
+  }
+}
+function editClient(id){ DRAFT = JSON.parse(JSON.stringify(CLIENTS[id])); CURRENT_SECTION = 0; switchTab('newform'); }
+function newEnrolment(){ DRAFT = blankClient(); CURRENT_SECTION = 0; switchTab('newform'); }
+
+/* Save / Next buttons appended after every section render */
+function renderFormActions(){
+  return `<div class="form-actions">
+    ${CURRENT_SECTION>0 ? `<button class="btn ghost" id="prevBtn">← Previous</button>` : ''}
+    ${CURRENT_SECTION<SECTIONS.length-1 ? `<button class="btn ghost" id="nextBtn">Next →</button>` : ''}
+    <button class="btn ghost" id="saveDraftBtn">Save &amp; Continue Later</button>
+    <button class="btn" id="saveFinishBtn">Save Enrolment</button>
+  </div>`;
+}
+
+const _origRenderFormSections = renderFormSections;
+renderFormSections = function(){
+  _origRenderFormSections();
+  document.getElementById('formBody').insertAdjacentHTML('beforeend', renderFormActions());
+  const prev = document.getElementById('prevBtn'); if(prev) prev.addEventListener('click', ()=>{ CURRENT_SECTION--; renderFormSections(); });
+  const next = document.getElementById('nextBtn'); if(next) next.addEventListener('click', ()=>{ CURRENT_SECTION++; renderFormSections(); });
+  document.getElementById('saveDraftBtn').addEventListener('click', ()=>saveDraft(false));
+  document.getElementById('saveFinishBtn').addEventListener('click', ()=>saveDraft(true));
+  if(SECTIONS[CURRENT_SECTION].id==='exit') bindExitListeners();
+};
+
+/* ============================================================
+   CLIENTS LIST
+============================================================ */
+function statusBadge(status){
+  if(status==='MAM') return '<span class="badge mam">MAM</span>';
+  if(status==='SAM') return '<span class="badge sam">SAM</span>';
+  if(status==='SAM_O') return '<span class="badge sam">SAM+Oedema</span>';
+  return '<span class="badge ok">—</span>';
+}
+function renderClients(){
+  const q = (document.getElementById('clientSearch').value||'').toLowerCase();
+  const fStatus = document.getElementById('filterStatus').value;
+  const fAdm = document.getElementById('filterAdmission').value;
+  let list = Object.values(CLIENTS);
+  if(q) list = list.filter(c => [c.surname,c.given_name,c.nin,c.inr_no,c.serial_no].join(' ').toLowerCase().includes(q));
+  if(fStatus) list = list.filter(c=>c.nutrition_status===fStatus);
+  if(fAdm) list = list.filter(c=>c.admission_type===fAdm);
+  list.sort((a,b)=>(b.enrol_date||'').localeCompare(a.enrol_date||''));
+  const wrap = document.getElementById('clientsTableWrap');
+  if(!list.length){ wrap.innerHTML = `<div class="empty-state"><div class="big">🥣</div><p>No clients match. <button class="btn small" onclick="newEnrolment()">+ New Enrolment</button></p></div>`; return; }
+  wrap.innerHTML = `<table><thead><tr><th>Date</th><th>INR No.</th><th>Serial No.</th><th>Name</th><th>Age</th><th>Sex</th><th>Status</th><th>Admission</th><th>Visits</th><th></th></tr></thead><tbody>
+    ${list.map(c=>`<tr>
+      <td>${c.enrol_date||''}</td><td>${c.inr_no||''}</td><td>${c.serial_no||''}</td>
+      <td>${esc(c.surname)} ${esc(c.given_name)}</td><td>${esc(c.age)} ${c.age_unit==='months'?'mo':'yr'}</td><td>${esc(c.sex)}</td>
+      <td>${statusBadge(c.nutrition_status)}</td><td>${c.admission_type||''}</td><td>${(c.visits||[]).length}</td>
+      <td><button class="btn small ghost" onclick="editClient('${c.id}')">Open</button></td>
+    </tr>`).join('')}
+  </tbody></table>`;
+}
+function exportClientsCsv(){
+  const list = Object.values(CLIENTS);
+  const headers = ['Date','SerialNo','INRNo','NIN','Surname','GivenName','Age','AgeUnit','Sex','Category','District','Subcounty','Parish','Village','Phone','NutritionStatus','OedemaGrade','AdmissionType','TBStatus','HIVStatus','ARTStatus','ExitOutcome','ExitDate'];
+  const rows = list.map(c=>[c.enrol_date,c.serial_no,c.inr_no,c.nin,c.surname,c.given_name,c.age,c.age_unit,c.sex,c.category,c.district,c.subcounty,c.parish,c.village,c.phone,c.nutrition_status,c.oedema_grade,c.admission_type,c.tb_status,c.hiv_status,c.art_status,c.exit.exit_outcome,c.exit.exit_date]);
+  const csv = [headers.join(','), ...rows.map(r=>r.map(v=>`"${(v||'').toString().replace(/"/g,'""')}"`).join(','))].join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'nutrition_register_export.csv'; a.click();
+}
+
+/* ============================================================
+   DASHBOARD
+============================================================ */
+function renderDashboard(){
+  const list = Object.values(CLIENTS);
+  document.getElementById('dashStats').innerHTML = `
+    <div class="stat-card"><div class="num">${list.length}</div><div class="lbl">Total Clients</div></div>
+    <div class="stat-card"><div class="num">${list.filter(c=>c.nutrition_status==='SAM'||c.nutrition_status==='SAM_O').length}</div><div class="lbl">SAM Cases</div></div>
+    <div class="stat-card"><div class="num">${list.filter(c=>c.nutrition_status==='MAM').length}</div><div class="lbl">MAM Cases</div></div>
+    <div class="stat-card"><div class="num">${list.filter(c=>c.exit && c.exit.exit_outcome).length}</div><div class="lbl">Exited</div></div>`;
+  const statusTally = {}; list.forEach(c=>{ if(c.nutrition_status) statusTally[c.nutrition_status]=(statusTally[c.nutrition_status]||0)+1; });
+  document.getElementById('dashStatus').innerHTML = barRows(Object.entries(statusTally));
+  const admTally = {}; list.forEach(c=>{ if(c.admission_type) admTally[c.admission_type]=(admTally[c.admission_type]||0)+1; });
+  document.getElementById('dashAdmission').innerHTML = barRows(Object.entries(admTally));
+  const recent = [...list].sort((a,b)=>(b.enrol_date||'').localeCompare(a.enrol_date||'')).slice(0,6);
+  document.getElementById('dashRecent').innerHTML = recent.length ? recent.map(c=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--ink-100);font-size:12.5px;"><span>${esc(c.surname)} ${esc(c.given_name)} — ${esc(c.inr_no)}</span>${statusBadge(c.nutrition_status)}</div>`).join('') : '<p style="color:var(--ink-400);font-size:12.5px;">No enrolments yet.</p>';
+}
+function barRows(rows){
+  if(!rows.length) return '<p style="color:var(--ink-400);font-size:12.5px;">No data yet.</p>';
+  const max = Math.max(1,...rows.map(r=>r[1]));
+  return rows.map(([k,v])=>`<div class="bar-row"><div class="bar-label">${k}</div><div class="bar-track"><div class="bar-fill" style="width:${v/max*100}%"></div></div><div class="bar-val">${v}</div></div>`).join('');
+}
+
+/* ============================================================
+   REPORTS — one generator per register category, with real period filtering
+============================================================ */
+const REPORT_CATEGORIES = [
+  {id:'overview', label:'Overview'},
+  {id:'admission', label:'16 · Type of Admission'},
+  {id:'status', label:'15 · Nutrition Status'},
+  {id:'assessment', label:'14 · Assessment Method Used'},
+  {id:'entrypoint', label:'13 · Entry Care Point'},
+  {id:'management', label:'17–18 · Nutrition Management & Counselling'},
+  {id:'tb', label:'19 · TB Status'},
+  {id:'hiv', label:'21–22 · HIV & ART'},
+  {id:'disability', label:'20 · Disability / Comorbidities'},
+  {id:'visits', label:'24 · Visit Compliance & Appetite Test'},
+  {id:'exit', label:'25–28 · Exit Outcomes'},
+  {id:'all', label:'All Categories (full facility report)'},
+];
+function periodRange(period){
+  const now = new Date(); const pad = n=>String(n).padStart(2,'0'); const toISO = d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  let start,end;
+  if(period==='daily'){ start=end=toISO(now); }
+  else if(period==='weekly'){ const day=now.getDay(); const diff=(day===0?-6:1-day); const mon=new Date(now); mon.setDate(now.getDate()+diff); const sun=new Date(mon); sun.setDate(mon.getDate()+6); start=toISO(mon); end=toISO(sun); }
+  else if(period==='monthly'){ start=`${now.getFullYear()}-${pad(now.getMonth()+1)}-01`; end=toISO(new Date(now.getFullYear(), now.getMonth()+1, 0)); }
+  else if(period==='quarterly'){ const q=Math.floor(now.getMonth()/3), sm=q*3; start=`${now.getFullYear()}-${pad(sm+1)}-01`; end=toISO(new Date(now.getFullYear(), sm+3, 0)); }
+  else { start=`${now.getFullYear()}-01-01`; end=`${now.getFullYear()}-12-31`; }
+  return {start,end};
+}
+function barPanel(title, rows){
+  const max = Math.max(1,...rows.map(r=>r[1]));
+  const body = rows.length ? rows.map(([k,v])=>`<div class="bar-row"><div class="bar-label">${k}</div><div class="bar-track"><div class="bar-fill" style="width:${v/max*100}%"></div></div><div class="bar-val">${v}</div></div>`).join('') : '<p style="color:var(--ink-400);font-size:12px;">No data for this period.</p>';
+  return `<div class="panel"><h3><span class="dot"></span>${title}</h3>${body}</div>`;
+}
+function countWhere(list, fn){ return list.filter(fn).length; }
+function tally(list, fn){ const t={}; list.forEach(c=>{ const v=fn(c); if(v) t[v]=(t[v]||0)+1; }); return Object.entries(t); }
+
+function renderReportCategory(id, list){
+  if(id==='overview'){
+    const stats = [
+      {lbl:'Total Enrolments', num:list.length},
+      {lbl:'SAM Cases', num:countWhere(list,c=>c.nutrition_status==='SAM'||c.nutrition_status==='SAM_O')},
+      {lbl:'MAM Cases', num:countWhere(list,c=>c.nutrition_status==='MAM')},
+      {lbl:'Exited', num:countWhere(list,c=>c.exit && c.exit.exit_outcome)},
+    ];
+    return `<div class="stat-grid">${stats.map(s=>`<div class="stat-card"><div class="num">${s.num}</div><div class="lbl">${s.lbl}</div></div>`).join('')}</div>
+      <div class="dash-grid">${barPanel('Nutrition Status', tally(list,c=>c.nutrition_status))}${barPanel('Sex', tally(list,c=>c.sex==='M'?'Male':c.sex==='F'?'Female':''))}</div>`;
+  }
+  if(id==='admission') return barPanel('Type of Admission', tally(list,c=>c.admission_type));
+  if(id==='status') return barPanel('Nutrition Status at Enrolment', tally(list,c=>c.nutrition_status));
+  if(id==='assessment') return barPanel('Assessment Method Used', tally(list,c=>c.assessment_method));
+  if(id==='entrypoint') return barPanel('Entry Care Point', tally(list,c=>c.entry_point));
+  if(id==='management'){
+    const rows = [['NC', countWhere(list,c=>c.mgmt.nc)],['SFC', countWhere(list,c=>c.mgmt.sfc)],['OTC', countWhere(list,c=>c.mgmt.otc)],['ITC', countWhere(list,c=>c.mgmt.itc)],['Counselling given', countWhere(list,c=>c.counselling_given)]];
+    return barPanel('Nutrition Management Type & Counselling', rows);
+  }
+  if(id==='tb') return barPanel('TB Status', tally(list,c=>c.tb_status));
+  if(id==='hiv'){ return `<div class="dash-grid">${barPanel('HIV Status', tally(list,c=>c.hiv_status))}${barPanel('ART Status', tally(list,c=>c.art_status))}</div>`; }
+  if(id==='disability'){
+    const t={}; list.forEach(c=>(c.disabilities||[]).forEach(d=>t[d]=(t[d]||0)+1));
+    return barPanel('Disability / Comorbidity Codes Recorded', Object.entries(t));
+  }
+  if(id==='visits'){
+    const rows = [
+      ['Clients with ≥1 visit', countWhere(list,c=>(c.visits||[]).length>0)],
+      ['Total visits logged', list.reduce((s,c)=>s+(c.visits||[]).length,0)],
+      ['Appetite test passed (any visit)', countWhere(list,c=>(c.visits||[]).some(v=>v.appetite_test==='Y'))],
+      ['Appetite test failed (any visit)', countWhere(list,c=>(c.visits||[]).some(v=>v.appetite_test==='N'))],
+    ];
+    return barPanel('Visit Compliance & Appetite Test', rows);
+  }
+  if(id==='exit') return barPanel('Exit Outcomes', tally(list,c=>c.exit && c.exit.exit_outcome));
+  return '';
+}
+function renderReports(){
+  const period = document.getElementById('reportPeriod').value;
+  const category = document.getElementById('reportCategory').value;
+  const {start,end} = periodRange(period);
+  document.getElementById('reportRangeLabel').textContent = `Range: ${start} to ${end}`;
+  const list = Object.values(CLIENTS).filter(c=> c.enrol_date && c.enrol_date>=start && c.enrol_date<=end);
+  const body = document.getElementById('reportBody');
+  if(!list.length){ body.innerHTML = '<div class="empty-state"><div class="big">📊</div><p>No enrolments fall within this period yet.</p></div>'; return; }
+  if(category==='all'){
+    body.innerHTML = REPORT_CATEGORIES.filter(c=>c.id!=='all').map(c=>`<h3 style="margin:22px 0 10px;font-size:13px;color:var(--teal-900);">${c.label}</h3>${renderReportCategory(c.id,list)}`).join('');
+  } else {
+    body.innerHTML = renderReportCategory(category, list);
+  }
+}
+function initReportControls(){
+  const sel = document.getElementById('reportCategory');
+  if(sel && !sel.dataset.init){
+    sel.innerHTML = REPORT_CATEGORIES.map(c=>`<option value="${c.id}">${c.label}</option>`).join('');
+    sel.dataset.init='1';
+    sel.addEventListener('change', renderReports);
+    document.getElementById('reportPeriod').addEventListener('change', renderReports);
+    document.getElementById('reportGenerateBtn').addEventListener('click', renderReports);
+  }
+}
+
+/* ============================================================
+   INIT
+============================================================ */
+document.getElementById('signInBtn').addEventListener('click', doSignIn);
+document.getElementById('signUpBtn').addEventListener('click', doSignUp);
+document.getElementById('exportCsvBtn').addEventListener('click', exportClientsCsv);
+['siUsername','siPassword'].forEach(id=>document.getElementById(id).addEventListener('keydown', e=>{ if(e.key==='Enter') doSignIn(); }));
+
+document.body.addEventListener('click', function(e){
+  const btn = e.target.closest('.picker-open-btn');
+  if(!btn) return;
+  const inputEl = btn.previousElementSibling;
+  openPicker(btn.dataset.pickerTitle, btn.dataset.pickerListkey, inputEl ? inputEl.value : '', btn.dataset.pickerPath);
+});
+async function init(){ await loadCore(); await populateFacilityDropdown(); }
+init();
+</script>
+</body>
+</html>
