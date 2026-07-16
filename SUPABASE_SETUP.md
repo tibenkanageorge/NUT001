@@ -64,8 +64,8 @@ create policy "Allow anon delete" on public.nutreg_kv
 Open `nut_register_system.html`, find near the top of the `<script>` block:
 
 ```js
-const SUPABASE_URL = 'YOUR_SUPABASE_PROJECT_URL';
-const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_PUBLIC_KEY';
+const SUPABASE_URL = 'https://whztbwotyxxxevkabawl.supabase.co/rest/v1/';
+const SUPABASE_ANON_KEY = 'sb_publishable_YFk7dqcUdP8Lqx5FKgS04w_YnMFLMIO';
 ```
 
 Replace both placeholder strings with the values from step 3, save, and re-deploy
