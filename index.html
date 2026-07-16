@@ -114,7 +114,7 @@ legend{font-size:12px;font-weight:700;color:var(--teal-700);padding:0 6px;}
 .row{display:grid;gap:12px;margin-bottom:12px;}
 .row.c2{grid-template-columns:1fr 1fr;} .row.c3{grid-template-columns:1fr 1fr 1fr;} .row.c4{grid-template-columns:1fr 1fr 1fr 1fr;}
 @media(max-width:900px){.row.c2,.row.c3,.row.c4{grid-template-columns:1fr;} .form-shell{flex-direction:column;} .form-nav{width:100%;position:static;display:flex;flex-wrap:wrap;} .form-nav button{width:auto;}}
-.field{display:flex;flex-direction:column;gap:4px;}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0;}
 .field label{font-size:11.5px;font-weight:600;color:var(--ink-600);}
 .field label .req{color:var(--red-700);}
 .field input,.field select,.field textarea{padding:8px 9px;border:1px solid var(--border);border-radius:7px;background:#fff;width:100%;}
@@ -129,7 +129,8 @@ legend{font-size:12px;font-weight:700;color:var(--teal-700);padding:0 6px;}
 .calc-box.warn{background:#fff4e0;color:#7a4c00;}
 .calc-box b{font-weight:700;}
 
-.chk-row{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:12.5px;}
+.chk-row{display:flex;align-items:flex-start;gap:8px;padding:6px 0;font-size:12.5px;}
+.chk-row input[type=checkbox]{flex-shrink:0;margin-top:2px;}
 .chk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:4px 14px;}
 
 .form-actions{display:flex;gap:10px;justify-content:flex-end;padding:14px 0 40px;}
@@ -313,6 +314,7 @@ footer.note{font-size:11px;color:var(--ink-400);text-align:center;padding:14px 0
     <button data-tab="newform" onclick="switchTab('newform')">➕ New Enrolment</button>
     <button data-tab="clients" onclick="switchTab('clients')">👥 Clients</button>
     <button data-tab="reports" onclick="switchTab('reports')">📈 Reports</button>
+    <button data-tab="users" id="usersNavBtn" onclick="switchTab('users')" style="display:none;">👤 Users</button>
   </div>
   <div class="sidebar-overlay" id="sidebarOverlay"></div>
   <div class="main">
@@ -364,6 +366,13 @@ footer.note{font-size:11px;color:var(--ink-400);text-align:center;padding:14px 0
         <span id="reportRangeLabel" style="font-size:11.5px;color:var(--ink-400);"></span>
       </div>
       <div id="reportBody"></div>
+    </section>
+
+    <!-- ================= USERS (Administrator only) ================= -->
+    <section id="view-users" class="view">
+      <h2 class="view-title">Users</h2>
+      <p class="view-sub">All accounts registered at this facility, and the enrolments each one has entered. Passwords are one-way hashed and cannot be viewed — use Reset Password to set a new one for a user.</p>
+      <div id="usersTableWrap"></div>
     </section>
 
   </div>
@@ -587,6 +596,7 @@ async function afterLogin(){
   document.getElementById('app').classList.add('show');
   document.getElementById('facilityChip').textContent = CURRENT_FACILITY ? CURRENT_FACILITY.name : 'Facility';
   document.getElementById('userChip').textContent = CURRENT_USER.fullName + ' · ' + CURRENT_USER.role;
+  document.getElementById('usersNavBtn').style.display = (CURRENT_USER.role==='Administrator') ? '' : 'none';
   updateSyncIndicator();
   if(window._USING_LOCAL_STORAGE_FALLBACK){
     const f = document.getElementById('appFooterNote');
@@ -654,6 +664,7 @@ function switchTab(name){
   if(name==='dashboard') renderDashboard();
   if(name==='clients') renderClients();
   if(name==='reports'){ initReportControls(); renderReports(); }
+  if(name==='users'){ renderUsers(); }
   if(name==='newform'){ if(!DRAFT) DRAFT = blankClient(); renderFormSections(); }
   closeSidebar();
   window.scrollTo(0,0);
@@ -702,7 +713,7 @@ function field(label, path, opts={}){
   }
   return `<div class="field" id="wrap_${id}"><label>${label}${reqStar}${opts.moh?'<span class="moh-badge">MoH</span>':''}</label>${control}${opts.hint?`<div class="hint">${opts.hint}</div>`:''}<div class="err-msg" id="err_${id}"></div></div>`;
 }
-function onField(path, val){ setPath(path, val); DRAFT.meta.updated_at = new Date().toISOString(); if(path==='surname'||path==='given_name'||path==='nin'||path==='phone') renderDupCheck(); if(path==='nutrition_status') renderFormSections(); }
+function onField(path, val){ setPath(path, val); DRAFT.meta.updated_at = new Date().toISOString(); if(path==='surname'||path==='given_name'||path==='nin'||path==='phone') renderDupCheck(); if(path==='nutrition_status'||path==='tb_status'||path==='hiv_status') renderFormSections(); }
 
 /* ============================================================
    DUPLICATE / INR REUSE DETECTION
@@ -1168,18 +1179,74 @@ function statusBadge(status){
   if(status==='SAM_O') return '<span class="badge sam">SAM+Oedema</span>';
   return '<span class="badge ok">—</span>';
 }
+/* ============================================================
+   USERS (Administrator only) — account list + who entered what.
+   Passwords are one-way hashed (pwHash) and are never stored or shown in
+   readable form; the only way to help someone who forgot theirs is to
+   set a brand-new password for them here.
+============================================================ */
+function renderUsers(){
+  const wrap = document.getElementById('usersTableWrap');
+  if(CURRENT_USER.role!=='Administrator'){
+    wrap.innerHTML = `<div class="empty-state"><p>Only Administrators can view this page.</p></div>`;
+    return;
+  }
+  const users = (CORE.users||[]).filter(u=>u.facility_id===CURRENT_FACILITY.id);
+  const countFor = uid => Object.values(CLIENTS).filter(c=>c.meta && c.meta.created_by===uid).length;
+  wrap.innerHTML = `<table><thead><tr><th>Full Name</th><th>Username</th><th>Role</th><th>Enrolments Entered</th><th></th></tr></thead><tbody>
+    ${users.map(u=>`<tr>
+      <td>${esc(u.fullName)}${u.id===CURRENT_USER.id?' <span class="moh-badge" style="background:var(--teal-700);">You</span>':''}</td>
+      <td>${esc(u.username)}</td>
+      <td>${esc(u.role)}</td>
+      <td>${countFor(u.id)}</td>
+      <td style="white-space:nowrap;">
+        <button class="btn small ghost" onclick="viewUserRecords('${u.id}')">View Records</button>
+        <button class="btn small ghost" onclick="resetUserPassword('${u.id}')">Reset Password</button>
+        ${u.id!==CURRENT_USER.id ? `<button class="btn small ghost" style="color:var(--red-700);" onclick="deleteUserAccount('${u.id}')">Remove</button>` : ''}
+      </td>
+    </tr>`).join('')}
+  </tbody></table>
+  <p class="section-sub" style="margin-top:14px;">Passwords cannot be displayed — they're stored as one-way hashes, the same way most systems handle passwords, so nobody (including Administrators) can read a user's actual password. Use <b>Reset Password</b> to issue a new one if someone is locked out.</p>`;
+}
+async function resetUserPassword(userId){
+  const user = CORE.users.find(u=>u.id===userId); if(!user) return;
+  const newPw = prompt(`Set a new password for ${user.fullName} (${user.username}):`);
+  if(newPw===null) return;
+  if(newPw.trim().length<4){ alert('Password should be at least 4 characters.'); return; }
+  user.password = pwHash(newPw.trim());
+  const ok = await saveCore();
+  alert(ok ? `Password reset for ${user.fullName}. Share the new password with them securely.` : 'Could not save — check your connection and try again.');
+}
+async function deleteUserAccount(userId){
+  const user = CORE.users.find(u=>u.id===userId); if(!user) return;
+  if(!confirm(`Remove the account "${user.username}" (${user.fullName})? Their previously entered records will NOT be deleted.`)) return;
+  CORE.users = CORE.users.filter(u=>u.id!==userId);
+  const ok = await saveCore();
+  if(ok) renderUsers(); else alert('Could not save — check your connection and try again.');
+}
+function viewUserRecords(userId){
+  window._usersRecordFilter = userId;
+  switchTab('clients');
+}
+
 function renderClients(){
   const q = (document.getElementById('clientSearch').value||'').toLowerCase();
   const fStatus = document.getElementById('filterStatus').value;
   const fAdm = document.getElementById('filterAdmission').value;
   let list = Object.values(CLIENTS);
+  let filterBanner = '';
+  if(window._usersRecordFilter){
+    const u = (CORE.users||[]).find(x=>x.id===window._usersRecordFilter);
+    list = list.filter(c=>c.meta && c.meta.created_by===window._usersRecordFilter);
+    filterBanner = `<div class="calc-box" style="margin-bottom:14px;"><span>Showing enrolments entered by <b>${u?esc(u.fullName):'this user'}</b></span><button class="btn small ghost" onclick="window._usersRecordFilter=null;renderClients();">Clear filter</button></div>`;
+  }
   if(q) list = list.filter(c => [c.surname,c.given_name,c.nin,c.inr_no,c.serial_no].join(' ').toLowerCase().includes(q));
   if(fStatus) list = list.filter(c=>c.nutrition_status===fStatus);
   if(fAdm) list = list.filter(c=>c.admission_type===fAdm);
   list.sort((a,b)=>(b.enrol_date||'').localeCompare(a.enrol_date||''));
   const wrap = document.getElementById('clientsTableWrap');
-  if(!list.length){ wrap.innerHTML = `<div class="empty-state"><div class="big">🥣</div><p>No clients match. <button class="btn small" onclick="newEnrolment()">+ New Enrolment</button></p></div>`; return; }
-  wrap.innerHTML = `<table><thead><tr><th>Date</th><th>INR No.</th><th>Serial No.</th><th>Name</th><th>Age</th><th>Sex</th><th>Status</th><th>Admission</th><th>Visits</th><th></th></tr></thead><tbody>
+  if(!list.length){ wrap.innerHTML = filterBanner + `<div class="empty-state"><div class="big">🥣</div><p>No clients match. <button class="btn small" onclick="newEnrolment()">+ New Enrolment</button></p></div>`; return; }
+  wrap.innerHTML = filterBanner + `<table><thead><tr><th>Date</th><th>INR No.</th><th>Serial No.</th><th>Name</th><th>Age</th><th>Sex</th><th>Status</th><th>Admission</th><th>Visits</th><th></th></tr></thead><tbody>
     ${list.map(c=>`<tr>
       <td>${c.enrol_date||''}</td><td>${c.inr_no||''}</td><td>${c.serial_no||''}</td>
       <td>${esc(c.surname)} ${esc(c.given_name)}</td><td>${esc(c.age)} ${c.age_unit==='months'?'mo':'yr'}</td><td>${esc(c.sex)}</td>
