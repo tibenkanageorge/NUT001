@@ -986,7 +986,7 @@ function renderVisitsSection(){
         <div class="field"><label>Therapeutic / Supplementary Feeds</label><input type="text" value="${esc(v.feeds)}" data-vfield="${idx}:feeds" placeholder="RUTF, F75, F100, ReSoMal, RUSF, CSB++, FBF, NC..."></div>
         <div class="field"><label>Counselling Code</label><select data-vfield="${idx}:counselling_code"><option value="">—</option><option value="1" ${v.counselling_code==='1'?'selected':''}>1 — Optimal dietary practices</option><option value="2" ${v.counselling_code==='2'?'selected':''}>2 — Use of Therapeutic Foods</option><option value="3" ${v.counselling_code==='3'?'selected':''}>3 — IYCF</option><option value="4" ${v.counselling_code==='4'?'selected':''}>4 — WASH</option><option value="5" ${v.counselling_code==='5'?'selected':''}>5 — ARV adherence</option><option value="6" ${v.counselling_code==='6'?'selected':''}>6 — Others</option></select></div>
       </div>
-      <div class="calc-box">
+      <div class="calc-box" data-viscalc="${idx}">
         ${bmi ? `<span><b>Computed BMI:</b> ${bmi.toFixed(1)} — ${classifyAdultBMI(bmi)}</span>` : ''}
         ${v.zscore ? `<span><b>Z-score classification:</b> ${DRAFT.assessment_method==='WA'?classifyWAZ(parseFloat(v.zscore)):DRAFT.assessment_method==='BA'?classifyBAZ(parseFloat(v.zscore)):classifyWHZ(parseFloat(v.zscore))}</span>` : ''}
       </div>
@@ -999,13 +999,22 @@ function renderVisitsSection(){
     <button type="button" class="btn small" id="addVisitBtn">+ Add Visit</button>
   </div>`;
 }
+function updateVisitCalc(idx){
+  const v = DRAFT.visits[idx]; if(!v) return;
+  const box = document.querySelector('[data-viscalc="'+idx+'"]'); if(!box) return;
+  const bmi = (parseFloat(v.height_cm)>0 && parseFloat(v.weight_kg)>0) ? (parseFloat(v.weight_kg)/((parseFloat(v.height_cm)/100)**2)) : null;
+  box.innerHTML = `
+    ${bmi ? `<span><b>Computed BMI:</b> ${bmi.toFixed(1)} — ${classifyAdultBMI(bmi)}</span>` : ''}
+    ${v.zscore ? `<span><b>Z-score classification:</b> ${DRAFT.assessment_method==='WA'?classifyWAZ(parseFloat(v.zscore)):DRAFT.assessment_method==='BA'?classifyBAZ(parseFloat(v.zscore)):classifyWHZ(parseFloat(v.zscore))}</span>` : ''}
+  `;
+}
 function bindVisitFormListeners(){
   document.getElementById('addVisitBtn').addEventListener('click', ()=>{
     DRAFT.visits.push({visit_date:'', next_appointment_date:'', oedema_grade:'', weight_kg:'', height_cm:'', muac_color:'', zscore:'', appetite_test:'', feeds:'', counselling_code:''});
     renderFormSections();
   });
   document.querySelectorAll('[data-vfield]').forEach(el=>{
-    const handler = ()=>{ const [idx,key] = el.dataset.vfield.split(':'); DRAFT.visits[idx][key] = el.value; if(key==='weight_kg'||key==='height_cm'||key==='zscore') renderFormSections(); };
+    const handler = ()=>{ const [idx,key] = el.dataset.vfield.split(':'); DRAFT.visits[idx][key] = el.value; if(key==='weight_kg'||key==='height_cm'||key==='zscore') updateVisitCalc(idx); };
     el.addEventListener(el.tagName==='SELECT' ? 'change' : 'input', handler);
   });
   document.querySelectorAll('[data-remove]').forEach(btn=>{
