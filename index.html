@@ -15,7 +15,9 @@
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink-900);font-size:14px;}
 h1,h2,h3,h4{margin:0 0 8px;color:var(--teal-900);}
 button{cursor:pointer;font-family:inherit;}
-input,select,textarea{font-family:inherit;font-size:13px;}
+input,select,textarea{font-family:inherit;font-size:16px;}
+/* 16px is deliberate: iOS Safari auto-zooms the page on focus for any input/select/textarea
+   with a computed font-size under 16px. Do not lower this below 16px on any input rule below. */
 
 /* ---------- AUTH SCREEN ---------- */
 #auth{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--teal-900),var(--teal-700));padding:20px;}
@@ -113,7 +115,7 @@ legend{font-size:12px;font-weight:700;color:var(--teal-700);padding:0 6px;}
 
 /* ---------- TABLES / LISTS ---------- */
 .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:center;}
-.toolbar input,.toolbar select{padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-size:12.5px;}
+.toolbar input,.toolbar select{padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-size:16px;}
 table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden;}
 th,td{padding:9px 10px;border-bottom:1px solid var(--border);font-size:12px;text-align:left;}
 th{background:var(--ink-100);color:var(--ink-600);font-weight:700;text-transform:uppercase;font-size:10px;letter-spacing:.03em;}
