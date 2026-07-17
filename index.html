@@ -256,13 +256,19 @@ footer.note{font-size:11px;color:var(--ink-400);text-align:center;padding:14px 0
       <div class="field-group"><label>Username</label><input id="suUsername" type="text"></div>
       <div class="field-group"><label>Password</label><input id="suPassword" type="password"></div>
       <div class="field-group"><label>Role</label>
-        <select id="suRole">
+        <select id="suRole" onchange="toggleTopMgmtOption()">
           <option value="Administrator">Administrator</option>
           <option value="Facility Nutrition Officer" selected>Facility Nutrition Officer</option>
           <option value="Nurse / Data Clerk">Nurse / Data Clerk</option>
           <option value="District Officer">District Officer</option>
           <option value="Read-only User">Read-only User</option>
         </select>
+      </div>
+      <div class="field-group" id="suTopMgmtWrap" style="display:none;">
+        <label style="display:flex;align-items:center;gap:8px;font-weight:500;">
+          <input type="checkbox" id="suTopMgmt" style="width:auto;">
+          Top Management (Ministry/HQ — view accounts &amp; activity across every facility, not just this one)
+        </label>
       </div>
       <div class="field-group"><label>Facility</label>
         <select id="suFacilityMode" onchange="toggleFacilityMode()">
@@ -274,8 +280,23 @@ footer.note{font-size:11px;color:var(--ink-400);text-align:center;padding:14px 0
       <div id="suNewFacilityWrap" style="display:none;">
         <div class="field-group"><label>Facility Name</label><input id="suFacilityName" type="text"></div>
         <div class="field-group"><label>Facility Code</label><input id="suFacilityCode" type="text"></div>
-        <div class="field-group"><label>Level</label><input id="suFacilityLevel" type="text" placeholder="e.g. HC IV"></div>
-        <div class="field-group"><label>District</label><input id="suFacilityDistrict" type="text"></div>
+        <div class="field-group"><label>Level</label>
+          <select id="suFacilityLevel">
+            <option value="">— Select level —</option>
+            <option value="Health Centre II">Health Centre II (HC II)</option>
+            <option value="Health Centre III">Health Centre III (HC III)</option>
+            <option value="Health Centre IV">Health Centre IV (HC IV)</option>
+            <option value="General Hospital">General Hospital</option>
+            <option value="Regional Referral Hospital">Regional Referral Hospital</option>
+            <option value="National Referral Hospital">National Referral Hospital</option>
+            <option value="Specialized Hospital">Specialized Hospital</option>
+            <option value="Private Not-for-Profit (PNFP) Facility">Private Not-for-Profit (PNFP) Facility</option>
+            <option value="Private Health Facility">Private Health Facility</option>
+          </select>
+        </div>
+        <div class="field-group"><label>District</label>
+          <select id="suFacilityDistrict"><option value="">— Select district —</option></select>
+        </div>
       </div>
       <button class="btn block" id="signUpBtn">Create Account</button>
     </div>
@@ -334,7 +355,7 @@ footer.note{font-size:11px;color:var(--ink-400);text-align:center;padding:14px 0
     <!-- ================= NEW ENROLMENT FORM ================= -->
     <section id="view-newform" class="view">
       <h2 class="view-title" id="formTitle">New Enrolment</h2>
-      <p class="view-sub">Every MoH field below is required exactly as the paper register defines it.</p>
+      <p class="view-sub">Every field below is required exactly as the paper register defines it.</p>
       <div id="formErrorBanner" class="form-error-banner"></div>
       <div class="form-shell">
         <div class="form-nav" id="formNav"></div>
@@ -380,7 +401,7 @@ footer.note{font-size:11px;color:var(--ink-400);text-align:center;padding:14px 0
 
 <div class="modal-bg" id="pickerModal"><div class="modal" id="pickerModalBody"></div></div>
 
-<footer class="note" id="appFooterNote" style="display:none;">Prototype Electronic NUT 001 Register &middot; Records are scoped to your facility &middot; Not a substitute for a validated MoH production HMIS</footer>
+<footer class="note" id="appFooterNote" style="display:none;">Prototype Electronic NUT 001 Register &middot; Records are scoped to your facility &middot; Not a substitute for a validated production HMIS</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -536,10 +557,18 @@ function toggleFacilityMode(){
   document.getElementById('suExistingFacilityWrap').style.display = mode==='existing' ? 'block':'none';
   document.getElementById('suNewFacilityWrap').style.display = mode==='new' ? 'block':'none';
 }
+function toggleTopMgmtOption(){
+  const isAdmin = document.getElementById('suRole').value === 'Administrator';
+  document.getElementById('suTopMgmtWrap').style.display = isAdmin ? 'block' : 'none';
+  if(!isAdmin) document.getElementById('suTopMgmt').checked = false;
+}
 async function populateFacilityDropdown(){
   await loadCore();
   const sel = document.getElementById('suExistingFacility');
   sel.innerHTML = CORE.facilities.length ? CORE.facilities.map(f=>`<option value="${f.id}">${f.name} (${f.code||'—'})</option>`).join('') : `<option value="">No facilities yet — choose "Register a new facility"</option>`;
+  const distSel = document.getElementById('suFacilityDistrict');
+  const districts = CORE.lists.districts && CORE.lists.districts.length ? CORE.lists.districts : UGANDA_DISTRICTS;
+  distSel.innerHTML = `<option value="">— Select district —</option>` + districts.map(d=>`<option value="${esc(d)}">${esc(d)}</option>`).join('');
 }
 
 async function doSignIn(){
@@ -574,7 +603,7 @@ async function doSignUp(){
     facility = { id:'fac_'+Date.now(), name, code:document.getElementById('suFacilityCode').value.trim(), level:document.getElementById('suFacilityLevel').value.trim(), district:document.getElementById('suFacilityDistrict').value.trim() };
     CORE.facilities.push(facility);
   }
-  const user = { id:'user_'+Date.now(), fullName, username, password:pwHash(password), role, facility_id:facility.id };
+  const user = { id:'user_'+Date.now(), fullName, username, password:pwHash(password), role, facility_id:facility.id, top_management: (role==='Administrator' && document.getElementById('suTopMgmt').checked) };
   CORE.users.push(user);
   const ok = await saveCore();
   if(!ok){ showAuthError('Could not create the account — storage save failed. Please try again.'); return; }
@@ -630,13 +659,41 @@ function nextSerialSuggestion(){
   }).length;
   return String(count+1).padStart(3,'0') + '/' + mm + '/' + yyyy;
 }
+/* INR Number = Facility/ClientNo/Year/Type. Facility and ClientNo are auto-derived here;
+   Year and Type are left for the user to type after the auto-filled part (the register's
+   own instructions don't fix a Year/Type format the system could safely assume). */
+const FACILITY_LEVEL_ABBR = {
+  'Health Centre II':'HC II', 'Health Centre III':'HC III', 'Health Centre IV':'HC IV',
+  'General Hospital':'GH', 'Regional Referral Hospital':'RRH', 'National Referral Hospital':'NRH',
+  'Specialized Hospital':'SH', 'Private Not-for-Profit (PNFP) Facility':'PNFP', 'Private Health Facility':'PHF'
+};
+function facilityInrPrefix(facility){
+  if(!facility) return '';
+  const abbr = FACILITY_LEVEL_ABBR[facility.level] || '';
+  return abbr ? `${facility.name} ${abbr}` : facility.name;
+}
+function nextClientNo(){
+  // Derived from the records themselves (highest existing ClientNo segment at this facility + 1),
+  // not a separately stored counter — so it stays correct even after edits or deletions.
+  let max = 0;
+  Object.values(CLIENTS).forEach(c=>{
+    const seg = (c.inr_no||'').split('/')[1];
+    const n = parseInt(seg, 10);
+    if(!isNaN(n) && n > max) max = n;
+  });
+  return String(max+1).padStart(3,'0');
+}
+function suggestInrPrefix(){
+  const year = new Date().getFullYear();
+  return `${facilityInrPrefix(CURRENT_FACILITY)}/${nextClientNo()}/${year}/`;
+}
 function blankClient(){
   return {
     id: 'nut_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
     facility_id: CURRENT_FACILITY.id,
     enrol_date: new Date().toISOString().slice(0,10),
     serial_no: nextSerialSuggestion(),
-    inr_no: '', nin: '',
+    inr_no: suggestInrPrefix(), nin: '',
     surname:'', given_name:'', age:'', age_unit:'years', sex:'', category:'N',
     district:'', subcounty:'', parish:'', village:'', phone:'',
     kin:{surname:'', given_name:'', phone:'', relationship:''},
@@ -657,17 +714,43 @@ function blankClient(){
 /* ============================================================
    NAVIGATION
 ============================================================ */
-function switchTab(name){
+async function switchTab(name, opts={}){
   document.querySelectorAll('.sidebar button').forEach(b=>b.classList.toggle('active', b.dataset.tab===name));
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('show'));
   document.getElementById('view-'+name).classList.add('show');
+  closeSidebar();
+  window.scrollTo(0,0);
+  if(name==='reports'){
+    // Start from the default period/category every time, rather than re-applying whatever was left selected last visit.
+    const periodEl = document.getElementById('reportPeriod'); if(periodEl) periodEl.value = 'monthly';
+    const catEl = document.getElementById('reportCategory'); if(catEl) catEl.value = 'overview';
+  }
+  if(name==='clients' && !opts.keepFilter){
+    // Start from a clean slate every time the Clients page is opened, rather than
+    // silently re-applying whatever search/filter was left over from last visit.
+    const searchEl = document.getElementById('clientSearch'); if(searchEl) searchEl.value = '';
+    const statusEl = document.getElementById('filterStatus'); if(statusEl) statusEl.value = '';
+    const admEl = document.getElementById('filterAdmission'); if(admEl) admEl.value = '';
+    window._usersRecordFilter = null;
+  }
+  // Refresh shared, facility-wide data from storage before rendering — otherwise
+  // this browser tab only ever shows the snapshot it loaded at sign-in, and misses
+  // accounts/records created meanwhile by other users or on other devices.
+  if(name==='clients'||name==='users'){
+    const wrap = document.getElementById(name==='clients'?'clientsTableWrap':'usersTableWrap');
+    if(wrap) wrap.innerHTML = `<div class="empty-state"><p>Refreshing…</p></div>`;
+  }
+  if(name==='dashboard'||name==='clients'||name==='reports'||name==='users'){
+    await loadAllClients();
+  }
+  if(name==='users'){
+    await loadCore();
+  }
   if(name==='dashboard') renderDashboard();
   if(name==='clients') renderClients();
   if(name==='reports'){ initReportControls(); renderReports(); }
-  if(name==='users'){ renderUsers(); }
+  if(name==='users'){ await renderUsers(); }
   if(name==='newform'){ if(!DRAFT) DRAFT = blankClient(); renderFormSections(); }
-  closeSidebar();
-  window.scrollTo(0,0);
 }
 function openSidebar(){ document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebarOverlay').classList.add('show'); }
 function closeSidebar(){ document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarOverlay').classList.remove('show'); }
@@ -711,7 +794,7 @@ function field(label, path, opts={}){
   } else {
     control = `<input id="${id}" type="${opts.type||'text'}" value="${esc(val)}" ${opts.disabled?'disabled':''} oninput="onField('${path}', this.value)">`;
   }
-  return `<div class="field" id="wrap_${id}"><label>${label}${reqStar}${opts.moh?'<span class="moh-badge">MoH</span>':''}</label>${control}${opts.hint?`<div class="hint">${opts.hint}</div>`:''}<div class="err-msg" id="err_${id}"></div></div>`;
+  return `<div class="field" id="wrap_${id}"><label>${label}${reqStar}</label>${control}${opts.hint?`<div class="hint">${opts.hint}</div>`:''}<div class="err-msg" id="err_${id}"></div></div>`;
 }
 function onField(path, val){ setPath(path, val); DRAFT.meta.updated_at = new Date().toISOString(); if(path==='surname'||path==='given_name'||path==='nin'||path==='phone') renderDupCheck(); if(path==='nutrition_status'||path==='tb_status'||path==='hiv_status') renderFormSections(); }
 
@@ -839,12 +922,12 @@ function renderFormSections(){
 
   if(s==='ident'){
     html += `<div class="section">
-      <h4>Client Identification <span class="moh-badge">MoH — Cols 1–9</span></h4>
+      <h4>Client Identification</h4>
       <p class="section-sub">A serial number restarts at 001 each month. An INR Number belongs to the client and should not change year to year — the system checks for an existing client as you type.</p>
       <div class="row c3">
         ${field('Enrolment Date','enrol_date',{type:'date',moh:true,required:true})}
         ${field('Serial Number','serial_no',{moh:true,required:true,hint:'Format NNN/MM/YYYY · auto-suggested, editable'})}
-        ${field('INR Number','inr_no',{moh:true,required:true,hint:'Facility/ClientNo/Year/Type e.g. Jinja RRH/001/2026/OTC'})}
+        ${field('INR Number','inr_no',{moh:true,required:true,hint:'Facility/ClientNo/Year are auto-filled from this facility\'s records — just add /Type, e.g. Jinja RRH/001/2026/OTC'})}
       </div>
       <div class="row c3">
         ${field('Surname','surname',{moh:true,required:true})}
@@ -870,7 +953,7 @@ function renderFormSections(){
 
   if(s==='kin'){
     html += `<div class="section">
-      <h4>Next of Kin <span class="moh-badge">MoH — Col 10</span></h4>
+      <h4>Next of Kin</h4>
       <p class="section-sub">For any follow-up or emergency contact.</p>
       <div class="row c2">${field('Surname','kin.surname',{moh:true})}${field('Given Name','kin.given_name',{moh:true})}</div>
       <div class="row c2">${field('Phone Contact','kin.phone',{type:'tel',moh:true})}${field('Relationship to Client','kin.relationship',{moh:true})}</div>
@@ -879,7 +962,7 @@ function renderFormSections(){
 
   if(s==='context'){
     html += `<div class="section">
-      <h4>Care Context <span class="moh-badge">MoH — Cols 11–13</span></h4>
+      <h4>Care Context</h4>
       <div class="row c3">
         ${field('Infant Feeding Practice','infant_feeding',{type:'select',moh:true,hint:'For children <2 years',options:[{v:'',l:'—'},{v:'EBF',l:'EBF — Exclusive Breast Feeding'},{v:'RF',l:'RF — Replacement Feeding'},{v:'MF',l:'MF — Mixed Feeding'},{v:'CF',l:'CF — Complementary Feeding'},{v:'NLB',l:'NLB — No longer Breastfeeding'},{v:'NA',l:'NA — Not Applicable'}]})}
         ${field('Pregnancy / Lactating Status','preg_lact_status',{type:'select',moh:true,options:[{v:'',l:'—'},{v:'Preg',l:'Preg — Pregnant'},{v:'Lact',l:'Lact — Lactating'},{v:'NLact',l:'NLact — Non-lactating, child <6mo'},{v:'NA',l:'NA — Not Applicable'}]})}
@@ -890,7 +973,7 @@ function renderFormSections(){
 
   if(s==='assessment'){
     html += `<div class="section">
-      <h4>Assessment &amp; Admission <span class="moh-badge">MoH — Cols 14–16</span></h4>
+      <h4>Assessment &amp; Admission</h4>
       <div class="row c2">
         ${field('Assessment Method','assessment_method',{type:'select',moh:true,required:true,options:[{v:'',l:'Select'},{v:'M',l:'M — MUAC Tape'},{v:'WH',l:'WH — Weight for Height/Length Z-score'},{v:'WA',l:'WA — Weight for Age Z-score'},{v:'BA',l:'BA — BMI for Age Z-score'},{v:'BMI',l:'BMI — Body Mass Index'},{v:'O',l:'O — Bilateral Pitting Oedema'}]})}
         ${field('Type of Admission','admission_type',{type:'select',moh:true,required:true,options:[{v:'',l:'Select'},{v:'N',l:'N — New Admission'},{v:'R-R',l:'R-R — Re-admission-Relapse'},{v:'R-D',l:'R-D — Readmission-Defaulter'},{v:'TI',l:'TI — Transfer In'}]})}
@@ -906,7 +989,7 @@ function renderFormSections(){
 
   if(s==='management'){
     html += `<div class="section">
-      <h4>Type of Nutrition Management &amp; Counselling <span class="moh-badge">MoH — Cols 17–18</span></h4>
+      <h4>Type of Nutrition Management &amp; Counselling</h4>
       <div class="chk-grid">
         <label class="chk-row"><input type="checkbox" ${DRAFT.mgmt.nc?'checked':''} onchange="onField('mgmt.nc', this.checked)"> NC — Nutrition Counselling</label>
         <label class="chk-row"><input type="checkbox" ${DRAFT.mgmt.sfc?'checked':''} onchange="onField('mgmt.sfc', this.checked)"> SFC — Supplementary Feeding Care</label>
@@ -919,7 +1002,7 @@ function renderFormSections(){
 
   if(s==='tbhiv'){
     html += `<div class="section">
-      <h4>TB Screening, HIV &amp; ART <span class="moh-badge">MoH — Cols 19, 21–22</span></h4>
+      <h4>TB Screening, HIV &amp; ART</h4>
       <fieldset><legend>TB</legend>
         <div class="row c2">
           ${field('TB Status','tb_status',{type:'select',moh:true,required:true,options:[{v:'',l:'Select'},{v:'1',l:'1 — No signs/symptoms'},{v:'2',l:'2 — Presumptive'},{v:'3G',l:'3G — TB Diagnosed (GeneXpert)'},{v:'3M',l:'3M — TB Diagnosed (Microscopy)'},{v:'3L',l:'3L — TB Diagnosed (LAM)'},{v:'3X',l:'3X — TB Diagnosed (X-ray)'},{v:'3O',l:'3O — TB Diagnosed (Other)'},{v:'4',l:'4 — TB NRx (diagnosed, not yet on treatment)'},{v:'5',l:'5 — TB Rx (on treatment)'},{v:'6',l:'6 — TB CPTD (treatment completed)'}]})}
@@ -939,7 +1022,7 @@ function renderFormSections(){
     const nutDis = [['1','Cleft Lip and Palate'],['2','Cerebral Palsy'],['3','Down Syndrome'],['4','Epilepsy'],['5','Autism Spectrum Disorder'],['6','Hydrocephalus']];
     const otherDis = [['A','Difficulty in seeing'],['B','Albinism'],['C','Difficulty in hearing'],['D','Delayed age motor development'],['E','Difficulty in walking'],['F','Difficulty in understanding'],['G','Difficulty in remembering'],['H','Difficulty in reading'],['I','Difficulty in writing'],['J','Difficulty washing all over/dressing'],['K','Mentally impaired'],['L','Emotionally impaired']];
     html += `<div class="section">
-      <h4>Disability / Other Comorbidities <span class="moh-badge">MoH — Col 20</span></h4>
+      <h4>Disability / Other Comorbidities</h4>
       <fieldset><legend>Disabilities that Impact Nutrition</legend>
         <div class="chk-grid">${nutDis.map(([c,l])=>`<label class="chk-row"><input type="checkbox" ${DRAFT.disabilities.includes(c)?'checked':''} onchange="toggleDisability('${c}')"> ${c} — ${l}</label>`).join('')}</div>
       </fieldset>
@@ -951,7 +1034,7 @@ function renderFormSections(){
 
   if(s==='complications'){
     html += `<div class="section">
-      <h4>Medical Complications at Enrolment <span class="moh-badge">MoH — Col 23</span></h4>
+      <h4>Medical Complications at Enrolment</h4>
       <p class="section-sub">e.g. severe anaemia, severe pneumonia, malaria, severe dehydration, shock, hypoglycaemia, hypothermia, severe dermatosis, cerebral palsy.</p>
       ${field('Medical Complications','medical_complications',{type:'textarea',moh:true,rows:4})}
     </div>`;
@@ -1004,7 +1087,7 @@ function renderVisitsSection(){
     </div>`;
   }).join('');
   return `<div class="section">
-    <h4>Enrolment &amp; Re-Visits <span class="moh-badge">MoH — Col 24</span></h4>
+    <h4>Enrolment &amp; Re-Visits</h4>
     <p class="section-sub">Add one entry per visit — unlike the paper form's fixed 12 columns, you can log as many visits as needed.</p>
     <div id="visitsList">${cards || '<p style="color:var(--ink-400);font-size:12.5px;">No visits recorded yet.</p>'}</div>
     <button type="button" class="btn small" id="addVisitBtn">+ Add Visit</button>
@@ -1038,21 +1121,21 @@ function renderExitSection(){
   const e = DRAFT.exit;
   const days = (DRAFT.enrol_date && e.exit_date) ? Math.max(0, Math.round((new Date(e.exit_date)-new Date(DRAFT.enrol_date))/86400000)) : null;
   return `<div class="section">
-    <h4>Assessment at Exit <span class="moh-badge">MoH — Cols 25–28</span></h4>
+    <h4>Assessment at Exit</h4>
     <div class="row c4">
       <div class="field"><label>Exit Oedema</label><select id="ex_oedema"><option value="" ${!e.oedema_grade?'selected':''}>None</option><option value="+" ${e.oedema_grade==='+'?'selected':''}>+</option><option value="++" ${e.oedema_grade==='++'?'selected':''}>++</option><option value="+++" ${e.oedema_grade==='+++'?'selected':''}>+++</option></select></div>
       <div class="field"><label>Exit Weight (kg)</label><input type="number" step="0.1" id="ex_weight" value="${e.weight_kg||''}"></div>
       <div class="field"><label>Exit Height/Length (cm)</label><input type="number" step="0.1" id="ex_height" value="${e.height_cm||''}"></div>
       <div class="field"><label>Exit MUAC (cm)</label><input type="number" step="0.1" id="ex_muac" value="${e.muac_cm||''}"></div>
     </div>
-    <fieldset><legend>Target Exit Criteria <span class="moh-badge">MoH — published target</span></legend>
+    <fieldset><legend>Target Exit Criteria</legend>
       <p class="section-sub" style="margin-top:0;">Register-published target: No oedema, AND MUAC ≥ 12.5 cm, AND Weight-for-Height Z-score ≥ −2SD.</p>
       <div id="targetCriteriaBox" class="calc-box"></div>
     </fieldset>
     <div class="row c3">
       ${field('Exit Outcome','exit.exit_outcome',{type:'select',moh:true,options:[{v:'',l:'Select'},{v:'SC',l:'SC — Successfully Treated'},{v:'C',l:'C — Cured'},{v:'NR',l:'NR — Non-Response'},{v:'DF-C',l:'DF-C — Defaulter, Confirmed'},{v:'DF-U',l:'DF-U — Defaulter, Unconfirmed'},{v:'D',l:'D — Died/Dead'}]})}
       ${field('Exit Date','exit.exit_date',{type:'date',moh:true})}
-      <div class="field"><label>Transfer Out <span class="moh-badge">MoH</span></label><label class="chk-row"><input type="checkbox" id="ex_transfer" ${e.transfer_out?'checked':''}> TO — Transferred to another facility</label></div>
+      <div class="field"><label>Transfer Out</label><label class="chk-row"><input type="checkbox" id="ex_transfer" ${e.transfer_out?'checked':''}> TO — Transferred to another facility</label></div>
     </div>
     <div class="calc-box">${days!==null ? `<span><b>Total Patient Days:</b> ${days}</span>` : '<span style="color:var(--ink-400);">Enter an exit date to compute total patient days.</span>'}</div>
   </div>`;
@@ -1152,17 +1235,24 @@ function newEnrolment(){ DRAFT = blankClient(); CURRENT_SECTION = 0; switchTab('
 /* Save / Next buttons appended after every section render */
 function renderFormActions(){
   return `<div class="form-actions">
+    <button class="btn ghost" id="cancelFormBtn" style="color:var(--red-700);">Cancel</button>
     ${CURRENT_SECTION>0 ? `<button class="btn ghost" id="prevBtn">← Previous</button>` : ''}
     ${CURRENT_SECTION<SECTIONS.length-1 ? `<button class="btn ghost" id="nextBtn">Next →</button>` : ''}
     <button class="btn ghost" id="saveDraftBtn">Save &amp; Continue Later</button>
     <button class="btn" id="saveFinishBtn">Save Enrolment</button>
   </div>`;
 }
+function cancelEnrolment(){
+  if(!confirm('Discard this enrolment and go back to the Clients list? Anything not already saved will be lost.')) return;
+  DRAFT = null; CURRENT_SECTION = 0;
+  switchTab('clients');
+}
 
 const _origRenderFormSections = renderFormSections;
 renderFormSections = function(){
   _origRenderFormSections();
   document.getElementById('formBody').insertAdjacentHTML('beforeend', renderFormActions());
+  document.getElementById('cancelFormBtn').addEventListener('click', cancelEnrolment);
   const prev = document.getElementById('prevBtn'); if(prev) prev.addEventListener('click', ()=>{ CURRENT_SECTION--; renderFormSections(); });
   const next = document.getElementById('nextBtn'); if(next) next.addEventListener('click', ()=>{ CURRENT_SECTION++; renderFormSections(); });
   document.getElementById('saveDraftBtn').addEventListener('click', ()=>saveDraft(false));
@@ -1185,28 +1275,63 @@ function statusBadge(status){
    readable form; the only way to help someone who forgot theirs is to
    set a brand-new password for them here.
 ============================================================ */
-function renderUsers(){
+let ALL_CLIENTS_CACHE = null; // only populated when a Top Management admin opens Users, so counts span every facility
+async function loadAllClientsAllFacilities(){
+  const idx = await sGet('clients_index', true) || [];
+  const out = {};
+  for(const entry of idx){
+    const rec = await sGet('client:'+entry.id, true);
+    if(rec) out[rec.id] = rec;
+  }
+  return out;
+}
+async function renderUsers(){
   const wrap = document.getElementById('usersTableWrap');
   if(CURRENT_USER.role!=='Administrator'){
     wrap.innerHTML = `<div class="empty-state"><p>Only Administrators can view this page.</p></div>`;
     return;
   }
-  const users = (CORE.users||[]).filter(u=>u.facility_id===CURRENT_FACILITY.id);
-  const countFor = uid => Object.values(CLIENTS).filter(c=>c.meta && c.meta.created_by===uid).length;
-  wrap.innerHTML = `<table><thead><tr><th>Full Name</th><th>Username</th><th>Role</th><th>Enrolments Entered</th><th></th></tr></thead><tbody>
+  const isTopMgmt = !!CURRENT_USER.top_management;
+  let users, clientsForCounts;
+  if(isTopMgmt){
+    users = (CORE.users||[]).slice();
+    wrap.innerHTML = `<div class="empty-state"><p>Loading accounts across all facilities…</p></div>`;
+    ALL_CLIENTS_CACHE = await loadAllClientsAllFacilities();
+    clientsForCounts = ALL_CLIENTS_CACHE;
+  } else {
+    users = (CORE.users||[]).filter(u=>u.facility_id===CURRENT_FACILITY.id);
+    clientsForCounts = CLIENTS;
+  }
+  const facilityName = fid => { const f=(CORE.facilities||[]).find(x=>x.id===fid); return f ? f.name : '—'; };
+  const countFor = uid => Object.values(clientsForCounts).filter(c=>c.meta && c.meta.created_by===uid).length;
+  wrap.innerHTML = `${isTopMgmt ? `<p class="section-sub" style="margin-bottom:12px;"><span class="moh-badge" style="background:var(--indigo-700);">Top Management</span> Showing accounts from all ${new Set((CORE.facilities||[]).map(f=>f.id)).size} facilities, not just ${esc(CURRENT_FACILITY.name)}.</p>` : ''}
+  <table><thead><tr><th>Full Name</th><th>Username</th><th>Role</th>${isTopMgmt?'<th>Facility</th>':''}<th>Enrolments Entered</th><th></th></tr></thead><tbody>
     ${users.map(u=>`<tr>
-      <td>${esc(u.fullName)}${u.id===CURRENT_USER.id?' <span class="moh-badge" style="background:var(--teal-700);">You</span>':''}</td>
+      <td>${esc(u.fullName)}${u.id===CURRENT_USER.id?' <span class="moh-badge" style="background:var(--teal-700);">You</span>':''}${u.top_management?' <span class="moh-badge" style="background:var(--indigo-700);" title="Top Management — sees all facilities">HQ</span>':''}</td>
       <td>${esc(u.username)}</td>
       <td>${esc(u.role)}</td>
+      ${isTopMgmt?`<td>${esc(facilityName(u.facility_id))}</td>`:''}
       <td>${countFor(u.id)}</td>
       <td style="white-space:nowrap;">
-        <button class="btn small ghost" onclick="viewUserRecords('${u.id}')">View Records</button>
+        <button class="btn small ghost" ${(isTopMgmt && u.facility_id!==CURRENT_FACILITY.id)?'disabled title="Switch to that facility to browse individual records"':''} onclick="viewUserRecords('${u.id}')">View Records</button>
         <button class="btn small ghost" onclick="resetUserPassword('${u.id}')">Reset Password</button>
+        ${(isTopMgmt && u.role==='Administrator' && u.id!==CURRENT_USER.id) ? `<button class="btn small ghost" onclick="toggleTopMgmtForUser('${u.id}')">${u.top_management?'Revoke':'Grant'} Top Mgmt</button>` : ''}
+        ${u.id===CURRENT_USER.id ? `<button class="btn small ghost" onclick="toggleTopMgmtForUser('${u.id}')">${u.top_management?'Revoke my Top Mgmt':'Make me Top Mgmt'}</button>` : ''}
         ${u.id!==CURRENT_USER.id ? `<button class="btn small ghost" style="color:var(--red-700);" onclick="deleteUserAccount('${u.id}')">Remove</button>` : ''}
       </td>
     </tr>`).join('')}
   </tbody></table>
   <p class="section-sub" style="margin-top:14px;">Passwords cannot be displayed — they're stored as one-way hashes, the same way most systems handle passwords, so nobody (including Administrators) can read a user's actual password. Use <b>Reset Password</b> to issue a new one if someone is locked out.</p>`;
+}
+async function toggleTopMgmtForUser(userId){
+  const user = CORE.users.find(u=>u.id===userId); if(!user) return;
+  const next = !user.top_management;
+  if(!confirm(`${next?'Grant':'Revoke'} Top Management (all-facility) access for ${user.fullName}?`)) return;
+  user.top_management = next;
+  const ok = await saveCore();
+  if(!ok){ alert('Could not save — check your connection and try again.'); return; }
+  if(userId===CURRENT_USER.id) CURRENT_USER.top_management = next; // CORE was reloaded fresh, so sync the session copy too
+  renderUsers();
 }
 async function resetUserPassword(userId){
   const user = CORE.users.find(u=>u.id===userId); if(!user) return;
@@ -1226,7 +1351,7 @@ async function deleteUserAccount(userId){
 }
 function viewUserRecords(userId){
   window._usersRecordFilter = userId;
-  switchTab('clients');
+  switchTab('clients', {keepFilter:true});
 }
 
 function renderClients(){
