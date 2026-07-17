@@ -252,7 +252,7 @@ footer.note{font-size:11px;color:var(--ink-400);text-align:center;padding:14px 0
     </div>
 
     <div id="signupForm" style="display:none;">
-      <div class="field-group"><label>Full Name</label><input id="suFullName" type="text"></div>
+      <div class="field-group"><label>Full Name</label><input id="suFullName" type="text" onblur="autoCapPlain(this,'words')"></div>
       <div class="field-group"><label>Username</label><input id="suUsername" type="text"></div>
       <div class="field-group"><label>Password</label><input id="suPassword" type="password"></div>
       <div class="field-group"><label>Role</label>
@@ -278,7 +278,7 @@ footer.note{font-size:11px;color:var(--ink-400);text-align:center;padding:14px 0
       </div>
       <div id="suExistingFacilityWrap" class="field-group"><label>Select Facility</label><select id="suExistingFacility"></select></div>
       <div id="suNewFacilityWrap" style="display:none;">
-        <div class="field-group"><label>Facility Name</label><input id="suFacilityName" type="text"></div>
+        <div class="field-group"><label>Facility Name</label><input id="suFacilityName" type="text" onblur="autoCapPlain(this,'words')"></div>
         <div class="field-group"><label>Facility Code</label><input id="suFacilityCode" type="text"></div>
         <div class="field-group"><label>Level</label>
           <select id="suFacilityLevel">
@@ -778,6 +778,24 @@ function renderFormNav(){
 
 /* ---------- field helper ---------- */
 function esc(s){ return (s===undefined||s===null) ? '' : String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+/* Auto-capitalization: applied on blur (not on every keystroke) so it never fights the cursor mid-type. */
+function capitalizeWords(str){
+  return (str||'').replace(/\s+/g,' ').trim().replace(/(^|[\s\-'\/])([a-z])/g, (m,pre,ch)=>pre+ch.toUpperCase());
+}
+function capitalizeSentence(str){
+  const s = (str||'');
+  return s.replace(/(^\s*|[.!?]\s+)([a-z])/g, (m,pre,ch)=>pre+ch.toUpperCase());
+}
+function autoCapField(id, path, mode){
+  const el = document.getElementById(id); if(!el) return;
+  const v = mode==='sentence' ? capitalizeSentence(el.value) : capitalizeWords(el.value);
+  el.value = v;
+  onField(path, v);
+}
+function autoCapPlain(el, mode){
+  if(!el) return;
+  el.value = mode==='sentence' ? capitalizeSentence(el.value) : capitalizeWords(el.value);
+}
 function fVal(path){ return path.split('.').reduce((o,k)=>o&&o[k]!==undefined?o[k]:'', DRAFT); }
 function setPath(path, val){ const parts = path.split('.'); let obj = DRAFT; for(let i=0;i<parts.length-1;i++) obj = obj[parts[i]]; obj[parts[parts.length-1]] = val; }
 function field(label, path, opts={}){
@@ -788,11 +806,11 @@ function field(label, path, opts={}){
   if(opts.type==='select'){
     control = `<select id="${id}" onchange="onField('${path}', this.value)">${(opts.options||[]).map(o=>`<option value="${esc(o.v)}" ${o.v===val?'selected':''}>${esc(o.l)}</option>`).join('')}</select>`;
   } else if(opts.type==='textarea'){
-    control = `<textarea id="${id}" rows="${opts.rows||3}" oninput="onField('${path}', this.value)">${esc(val)}</textarea>`;
+    control = `<textarea id="${id}" rows="${opts.rows||3}" oninput="onField('${path}', this.value)" ${opts.autocap?`onblur="autoCapField('${id}','${path}','${opts.autocap}')"`:''}>${esc(val)}</textarea>`;
   } else if(opts.type==='picker'){
     control = `<div class="picker-input"><input id="${id}" type="text" value="${esc(val)}" readonly placeholder="Tap to select"><button type="button" class="btn small ghost picker-open-btn" data-picker-title="${esc(label)}" data-picker-listkey="${esc(opts.listKey)}" data-picker-path="${esc(path)}">Select</button></div>`;
   } else {
-    control = `<input id="${id}" type="${opts.type||'text'}" value="${esc(val)}" ${opts.disabled?'disabled':''} oninput="onField('${path}', this.value)">`;
+    control = `<input id="${id}" type="${opts.type||'text'}" value="${esc(val)}" ${opts.disabled?'disabled':''} oninput="onField('${path}', this.value)" ${opts.autocap?`onblur="autoCapField('${id}','${path}','${opts.autocap}')"`:''}>`;
   }
   return `<div class="field" id="wrap_${id}"><label>${label}${reqStar}</label>${control}${opts.hint?`<div class="hint">${opts.hint}</div>`:''}<div class="err-msg" id="err_${id}"></div></div>`;
 }
@@ -930,8 +948,8 @@ function renderFormSections(){
         ${field('INR Number','inr_no',{moh:true,required:true,hint:'Facility/ClientNo/Year are auto-filled from this facility\'s records — just add /Type, e.g. Jinja RRH/001/2026/OTC'})}
       </div>
       <div class="row c3">
-        ${field('Surname','surname',{moh:true,required:true})}
-        ${field('Given Name','given_name',{moh:true,required:true})}
+        ${field('Surname','surname',{moh:true,required:true,autocap:'words'})}
+        ${field('Given Name','given_name',{moh:true,required:true,autocap:'words'})}
         ${field('NIN','nin',{moh:true,hint:'National Identification Number, if a National'})}
       </div>
       <div id="dupCheckBox"></div>
@@ -955,8 +973,8 @@ function renderFormSections(){
     html += `<div class="section">
       <h4>Next of Kin</h4>
       <p class="section-sub">For any follow-up or emergency contact.</p>
-      <div class="row c2">${field('Surname','kin.surname',{moh:true})}${field('Given Name','kin.given_name',{moh:true})}</div>
-      <div class="row c2">${field('Phone Contact','kin.phone',{type:'tel',moh:true})}${field('Relationship to Client','kin.relationship',{moh:true})}</div>
+      <div class="row c2">${field('Surname','kin.surname',{moh:true,autocap:'words'})}${field('Given Name','kin.given_name',{moh:true,autocap:'words'})}</div>
+      <div class="row c2">${field('Phone Contact','kin.phone',{type:'tel',moh:true})}${field('Relationship to Client','kin.relationship',{moh:true,autocap:'words'})}</div>
     </div>`;
   }
 
@@ -1036,7 +1054,7 @@ function renderFormSections(){
     html += `<div class="section">
       <h4>Medical Complications at Enrolment</h4>
       <p class="section-sub">e.g. severe anaemia, severe pneumonia, malaria, severe dehydration, shock, hypoglycaemia, hypothermia, severe dermatosis, cerebral palsy.</p>
-      ${field('Medical Complications','medical_complications',{type:'textarea',moh:true,rows:4})}
+      ${field('Medical Complications','medical_complications',{type:'textarea',moh:true,rows:4,autocap:'sentence'})}
     </div>`;
   }
 
